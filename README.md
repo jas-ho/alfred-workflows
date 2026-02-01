@@ -76,22 +76,6 @@ Control Moom window management actions from Alfred. Lists all available Moom act
 
 ---
 
-### [Split Display](Split%20Display.alfredworkflow)
-
-**Keyword:** `split <app>`
-
-Split display between the current app and another app. The current window moves to the left half, the specified app moves to the right half.
-
-**Example:** `split Safari` splits the screen with your current app on the left and Safari on the right.
-
-**Dependencies:** A window manager app configured with these shortcuts:
-- `Ctrl+Opt+Cmd+←` → move window to left half
-- `Ctrl+Opt+Cmd+→` → move window to right half
-
-Works with [Moom](https://manytricks.com/moom/), [Rectangle](https://rectangleapp.com/), [Magnet](https://magnet.crowdcafe.com/), or similar.
-
----
-
 ## Installation
 
 Double-click any `.alfredworkflow` file to install.
