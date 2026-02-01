@@ -2,6 +2,17 @@
 
 Custom Alfred workflows for macOS productivity automation.
 
+## Requirements
+
+- [Alfred](https://www.alfredapp.com/) with Powerpack license
+- macOS
+
+Install dependencies for workflows that need them:
+
+```bash
+brew install jq pandoc cliclick
+```
+
 ## Workflows
 
 ### [Edge Workspace Switcher](Edge%20Workspace%20Switcher.alfredworkflow)
@@ -42,7 +53,14 @@ Remove line breaks and normalize whitespace from clipboard content, then paste. 
 
 **Keyword:** `ff`
 
-Workaround for the [macOS focus stealing bug](https://hynek.me/til/macos-window-focus-desktops/). When switching between apps across desktops (e.g., via Alfred), macOS sometimes gives focus to a random app instead of the one you activated. The fix involves opening Safari with two tabs and dragging one into a separate window. This workflow triggers an external script at `~/bin/fix-macos-focus` that automates this workaround.
+Workaround for the [macOS focus stealing bug](https://hynek.me/til/macos-window-focus-desktops/). When switching between apps across desktops (e.g., via Alfred), macOS sometimes gives focus to a random app instead of the one you activated. The fix involves opening Safari with two tabs and dragging one into a separate window.
+
+**Setup:**
+1. Copy [`fix-macos-focus.sh`](fix-macos-focus.sh) to `~/bin/fix-macos-focus`
+2. Make it executable: `chmod +x ~/bin/fix-macos-focus`
+3. Grant Accessibility permissions to Alfred (System Settings → Privacy & Security → Accessibility)
+
+**Dependencies:** [cliclick](https://github.com/BlueM/cliclick) (`brew install cliclick`)
 
 ---
 
@@ -63,6 +81,12 @@ Control Moom window management actions from Alfred. Lists all available Moom act
 Split display between the current app and another app. The current window moves to the left half, the specified app moves to the right half.
 
 **Example:** `split Safari` splits the screen with your current app on the left and Safari on the right.
+
+**Dependencies:** A window manager app configured with these shortcuts:
+- `Ctrl+Opt+Cmd+←` → move window to left half
+- `Ctrl+Opt+Cmd+→` → move window to right half
+
+Works with [Moom](https://manytricks.com/moom/), [Rectangle](https://rectangleapp.com/), [Magnet](https://magnet.crowdcafe.com/), or similar.
 
 ---
 

@@ -4,6 +4,7 @@
 
 - `.alfredworkflow` files are zip archives containing `info.plist` + scripts + icons
 - Edge Workspace Switcher has extracted source files in repo root for easier editing
+- `fix-macos-focus.sh` is an external script used by the Fix macOS Focus workflow
 
 ## Adding/Updating Workflows
 
