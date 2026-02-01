@@ -3,7 +3,6 @@
 ## Structure
 
 - `.alfredworkflow` files are zip archives containing `info.plist` + scripts + icons
-- Edge Workspace Switcher has extracted source files in repo root for easier editing
 
 ## Adding/Updating Workflows
 

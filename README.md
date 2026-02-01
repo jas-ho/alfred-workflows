@@ -79,4 +79,9 @@ Double-click any `.alfredworkflow` file to install.
 
 ## Development
 
-Source files (info.plist, icons) are included for Edge Workspace Switcher. The workflow files themselves are zip archives that can be extracted for inspection.
+The `.alfredworkflow` files are zip archives that can be extracted for inspection:
+
+```bash
+unzip -l "Workflow Name.alfredworkflow"  # list contents
+unzip -p "Workflow Name.alfredworkflow" info.plist | plutil -p -  # view config
+```
