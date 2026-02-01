@@ -37,7 +37,7 @@ Convert natural language dates/times to Discord timestamp formats. Type somethin
 - Long/short date
 - Long/short time
 
-**Note:** Discord now has a native `@time` feature (desktop, Jan 2026) for creating timestamps directly in chat. This workflow is still useful for quickly generating timestamps from Alfred without switching to Discord first.
+**Note:** Discord now has a native `@time` feature (desktop, Jan 2026) for creating timestamps directly in chat.
 
 ---
 
@@ -45,7 +45,7 @@ Convert natural language dates/times to Discord timestamp formats. Type somethin
 
 **Keyword:** `clean paste` or `cp`
 
-Remove line breaks and normalize whitespace from clipboard content, then paste. Useful for cleaning up text copied from PDFs or formatted sources.
+Remove line breaks and normalize whitespace from clipboard content, then paste. Useful for cleaning up text copied from PDFs or formatted sources. Main use case for me as of early 2026: Cleaning up terminal output of coding agents.
 
 **Dependencies:** [pandoc](https://pandoc.org/)
 
@@ -55,7 +55,7 @@ Remove line breaks and normalize whitespace from clipboard content, then paste. 
 
 **Keyword:** `ff`
 
-Workaround for the [macOS focus stealing bug](https://hynek.me/til/macos-window-focus-desktops/). When switching between apps across desktops (e.g., via Alfred), macOS sometimes gives focus to a random app instead of the one you activated. The fix involves opening Safari with two tabs and dragging one into a separate window.
+Workaround for the [macOS focus stealing bug](https://hynek.me/til/macos-window-focus-desktops/). When switching between apps across desktops (e.g., via Alfred), macOS sometimes gives focus to a random app instead of the one you activated. The fix involves opening Safari with two tabs and dragging one into a separate window. Sounds crazy but it works.
 
 **Setup:**
 1. Copy [`fix-macos-focus.sh`](fix-macos-focus.sh) to `~/bin/fix-macos-focus`
@@ -70,7 +70,7 @@ Workaround for the [macOS focus stealing bug](https://hynek.me/til/macos-window-
 
 **Keyword:** `wm`
 
-Control Moom window management actions from Alfred. Lists all available Moom actions (window positions, layouts, display moves) and executes the selected one.
+Control Moom window management actions from Alfred. Lists all available Moom actions (window positions, layouts, display moves) and executes the selected one. To make this useful you'll need to configure Moom with your preferred window arrangements and give them files that are easy to fuzzy-search. For example: "Left & Right" for sending window 1 to left half and window 2 to right half; "Sidecar" for sending window 1 to left 2/3 and window 2 to left 1/3; "Monitor to left" for sending window to monitor to the left if existing; etc.
 
 **Dependencies:** [Moom](https://manytricks.com/moom/)
 
