@@ -59,7 +59,7 @@ Workaround for the [macOS focus stealing bug](https://hynek.me/til/macos-window-
 
 **Setup:** Grant Accessibility permissions to Alfred (System Settings → Privacy & Security → Accessibility)
 
-**Dependencies:** [cliclick](https://github.com/BlueM/cliclick) (`brew install cliclick`)
+**Dependencies:** [cliclick](https://github.com/BlueM/cliclick)
 
 ---
 
