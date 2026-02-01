@@ -37,7 +37,7 @@ Convert natural language dates/times to Discord timestamp formats. Type somethin
 - Long/short date
 - Long/short time
 
-**Note:** Discord now has a native `/time` command for generating timestamps directly in chat. This workflow is still useful for quickly generating timestamps from Alfred without switching to Discord first.
+**Note:** Discord now has a native `@time` feature (desktop, Jan 2026) for creating timestamps directly in chat. This workflow is still useful for quickly generating timestamps from Alfred without switching to Discord first.
 
 ---
 
