@@ -1,9 +1,8 @@
 # Alfred Workflows
 
-> "LLMs are super useful for fixing the little annoyances of computer use."
-> — [Thread on X](https://x.com/JasonObermaier/status/2017881958726975934)
-
 Custom Alfred workflows for macOS productivity automation.
+
+Note: [LLMs are great at one-shotting these](https://x.com/JasonObermaier/status/2017881958726975934). You should try it!
 
 ## Requirements
 
