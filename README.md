@@ -57,10 +57,7 @@ Remove line breaks and normalize whitespace from clipboard content, then paste. 
 
 Workaround for the [macOS focus stealing bug](https://hynek.me/til/macos-window-focus-desktops/). When switching between apps across desktops (e.g., via Alfred), macOS sometimes gives focus to a random app instead of the one you activated. The fix involves opening Safari with two tabs and dragging one into a separate window. Sounds crazy but it works.
 
-**Setup:**
-1. Copy [`fix-macos-focus.sh`](fix-macos-focus.sh) to `~/bin/fix-macos-focus`
-2. Make it executable: `chmod +x ~/bin/fix-macos-focus`
-3. Grant Accessibility permissions to Alfred (System Settings → Privacy & Security → Accessibility)
+**Setup:** Grant Accessibility permissions to Alfred (System Settings → Privacy & Security → Accessibility)
 
 **Dependencies:** [cliclick](https://github.com/BlueM/cliclick) (`brew install cliclick`)
 
