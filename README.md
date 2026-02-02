@@ -75,6 +75,22 @@ Control Moom window management actions from Alfred. Lists all available Moom act
 
 ---
 
+### [Multi-Paste](Multi-Paste.alfredworkflow)
+
+**Keyword:** `mp` or `Multi Paste`
+
+Select multiple items from Alfred's clipboard history and paste them as a formatted list. Opens a Terminal window with fzf for multi-selection (TAB to select, Ctrl-A for all, Enter to confirm), then lets you choose output format: dash list, numbered list, bullet points, comma-separated, or plain newlines. Result is auto-pasted to the original app.
+
+**Setup:** Copy helper scripts to your PATH:
+```bash
+cp Multi-Paste/multiclip.py Multi-Paste/multiclip-wrapper.sh ~/bin/
+chmod +x ~/bin/multiclip.py ~/bin/multiclip-wrapper.sh
+```
+
+**Dependencies:** [fzf](https://github.com/junegunn/fzf), Python 3
+
+---
+
 ## Installation
 
 Double-click any `.alfredworkflow` file to install.
