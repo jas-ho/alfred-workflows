@@ -91,6 +91,22 @@ chmod +x ~/bin/multiclip.py ~/bin/multiclip-wrapper.sh
 
 ---
 
+### [Multi Send](Multi%20Send.alfredworkflow)
+
+**Keyword:** `ms` or `Multi Send`
+
+Send clipboard list items as separate messages. Parses the clipboard content based on format (dash list, numbered, bullets, comma-separated, or plain newlines), then sends each item as an individual message to the frontmost app with Cmd+V and Enter. Includes focus-change detection to abort if you switch apps mid-send.
+
+**Setup:** Copy helper script to your PATH:
+```bash
+cp Multi-Send/multisend.py ~/bin/
+chmod +x ~/bin/multisend.py
+```
+
+**Dependencies:** Python 3
+
+---
+
 ## Installation
 
 Double-click any `.alfredworkflow` file to install.
