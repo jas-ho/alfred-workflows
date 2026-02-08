@@ -12,7 +12,7 @@ Note: [LLMs are great at one-shotting these](https://x.com/JasonObermaier/status
 Install dependencies for workflows that need them:
 
 ```bash
-brew install jq pandoc cliclick
+brew install jq cliclick
 ```
 
 ## Workflows
@@ -49,7 +49,7 @@ Convert natural language dates/times to Discord timestamp formats. Type somethin
 
 Remove line breaks and normalize whitespace from clipboard content, then paste. Useful for cleaning up text copied from PDFs or formatted sources. Main use case for me as of early 2026: Cleaning up terminal output of coding agents.
 
-**Dependencies:** [pandoc](https://pandoc.org/)
+**Dependencies:** Python 3
 
 ---
 
@@ -75,7 +75,7 @@ Control Moom window management actions from Alfred. Lists all available Moom act
 
 ---
 
-### [Multi-Paste](Multi-Paste.alfredworkflow)
+### [Multi Paste](Multi%20Paste.alfredworkflow)
 
 **Keyword:** `mp` or `Multi Paste`
 
@@ -83,7 +83,7 @@ Select multiple items from Alfred's clipboard history and paste them as a format
 
 **Setup:** Copy helper scripts to your PATH:
 ```bash
-cp Multi-Paste/multiclip.py Multi-Paste/multiclip-wrapper.sh ~/bin/
+cp scripts/Multi\ Paste/multiclip.py scripts/Multi\ Paste/multiclip-wrapper.sh ~/bin/
 chmod +x ~/bin/multiclip.py ~/bin/multiclip-wrapper.sh
 ```
 
@@ -99,7 +99,7 @@ Send clipboard list items as separate messages. Parses the clipboard content bas
 
 **Setup:** Copy helper script to your PATH:
 ```bash
-cp Multi-Send/multisend.py ~/bin/
+cp scripts/Multi\ Send/multisend.py ~/bin/
 chmod +x ~/bin/multisend.py
 ```
 
