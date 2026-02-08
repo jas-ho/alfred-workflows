@@ -109,9 +109,9 @@ chmod +x ~/bin/multisend.py
 
 ## Installation
 
-Double-click any `.alfredworkflow` file to install. Some workflows require helper scripts — check the workflow's section above for setup instructions.
+Double-click any `.alfredworkflow` file to install. Some workflows require helper scripts -> check the workflow's section above for setup instructions.
 
-Alternatively, point a computer-use agent at this repo and ask it to set things up for you.
+Alternatively, point a computer-use agent (like Claude Code) at this repo and ask it to set things up for you.
 
 ## Development
 
