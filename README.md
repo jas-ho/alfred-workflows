@@ -75,6 +75,30 @@ Control Moom window management actions from Alfred. Lists all available Moom act
 
 ---
 
+### [Smart Date](Smart%20Date.alfredworkflow)
+
+**Keyword:** `sd` or `smartdate`
+
+Parse natural language dates and times into multiple output formats. Type something like "next tuesday", "in three months", or "tomorrow 3pm" and pick the format you need. Auto-detects whether a time component was specified and adjusts the output formats accordingly.
+
+**Date-only formats** (e.g., `sd next tuesday`):
+- ISO date (`2026-03-10`)
+- European date (`10.03.2026`)
+- English (`Tuesday, March 10, 2026`)
+- German (`Dienstag, 10. März 2026`)
+- Unix timestamp
+
+**DateTime formats** (e.g., `sd tomorrow 3pm`):
+- ISO datetime (`2026-03-10_15-00`)
+- European datetime (`10.03.2026 15:00`)
+- English (`Tuesday, March 10, 2026, 3:00 PM`)
+- German (`Dienstag, 10. März 2026, 15:00`)
+- Unix timestamp
+
+**Supported inputs:** Named days (`next friday`), relative offsets (`in 2 days`, `three months ago`), sub-day offsets (`in 90 minutes`, `5hrs`), calendar navigation (`next month`, `last year`), specific dates (`march 15`), and word-form numbers (`in five weeks`).
+
+---
+
 ### [Multi Paste](Multi%20Paste.alfredworkflow)
 
 **Keyword:** `mp` or `Multi Paste`
