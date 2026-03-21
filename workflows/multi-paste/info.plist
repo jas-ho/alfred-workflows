@@ -1,0 +1,274 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>bundleid</key>
+	<string>com.jason.multipaste</string>
+	<key>connections</key>
+	<dict>
+		<key>4220135A-7E73-47EC-BEE3-F83F6E0B37DC</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>SCRIPT-001</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>KEYWORD-001</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>SCRIPT-001</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>SCRIPT-001</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>CLIPBOARD-001</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+	</dict>
+	<key>createdby</key>
+	<string>Jason Hoelscher-Obermaier</string>
+	<key>description</key>
+	<string>Multi-select clipboard items and paste as formatted list</string>
+	<key>disabled</key>
+	<false/>
+	<key>name</key>
+	<string>Multi Paste</string>
+	<key>objects</key>
+	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>0</integer>
+				<key>script</key>
+				<string>-- 1. Record frontmost app IMMEDIATELY (before any focus change)
+tell application "System Events"
+    set frontAppID to bundle identifier of first application process whose frontmost is true
+end tell
+do shell script "echo " &amp; quoted form of frontAppID &amp; " &gt; /tmp/mp-frontapp"
+
+-- 2. Clear stale temp files
+do shell script "rm -f /tmp/mp-pid /tmp/mp-result /tmp/mp-start /tmp/mp-success"
+
+-- 3. Ensure Terminal is running
+try
+    do shell script "open -a Terminal"
+end try
+
+delay 0.2
+
+-- 4. Launch wrapper in Terminal (no window creation)
+tell application id "com.apple.Terminal"
+    activate
+    set mpTab to do script "$HOME/bin/multiclip-wrapper.sh"
+end tell
+
+-- 5. Wait for PID file to appear (max 2s)
+set pidFound to false
+repeat 20 times
+    try
+        do shell script "test -f /tmp/mp-pid"
+        set pidFound to true
+        exit repeat
+    end try
+    delay 0.1
+end repeat
+
+if not pidFound then
+    return ""
+end if
+
+-- 6. Wait for PID to exit (max 120s)
+set wrapperPID to do shell script "cat /tmp/mp-pid"
+set waited to 0
+repeat while waited &lt; 120
+    try
+        do shell script "ps -p " &amp; wrapperPID &amp; " &gt; /dev/null 2&gt;&amp;1"
+        delay 0.1
+        set waited to waited + 0.1
+    on error
+        exit repeat
+    end try
+end repeat
+
+-- 7. Read result if success marker exists and is fresh
+set output to ""
+try
+    set startTime to (do shell script "cat /tmp/mp-start 2&gt;/dev/null || echo 0") as integer
+    set resultMtime to (do shell script "stat -f %m /tmp/mp-result 2&gt;/dev/null || echo 0") as integer
+    do shell script "test -f /tmp/mp-success"
+    if resultMtime &gt; startTime then
+        set output to do shell script "cat /tmp/mp-result 2&gt;/dev/null"
+    end if
+end try
+
+-- 8. Return focus to original app
+if output is not "" then
+    set frontAppID to do shell script "cat /tmp/mp-frontapp 2&gt;/dev/null"
+    if frontAppID is not "" then
+        tell application id frontAppID to activate
+    end if
+end if
+
+return output
+</string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string></string>
+				<key>type</key>
+				<integer>6</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>SCRIPT-001</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>autopaste</key>
+				<true/>
+				<key>clipboardtext</key>
+				<string>{query}</string>
+				<key>ignoredynamicplaceholders</key>
+				<false/>
+				<key>transient</key>
+				<false/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.output.clipboard</string>
+			<key>uid</key>
+			<string>CLIPBOARD-001</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>argumenttype</key>
+				<integer>2</integer>
+				<key>keyword</key>
+				<string>Multi Paste</string>
+				<key>subtext</key>
+				<string>Select multiple clipboard items and format as list</string>
+				<key>text</key>
+				<string>Multi Paste</string>
+				<key>withspace</key>
+				<false/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.keyword</string>
+			<key>uid</key>
+			<string>4220135A-7E73-47EC-BEE3-F83F6E0B37DC</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>argumenttype</key>
+				<integer>2</integer>
+				<key>keyword</key>
+				<string>mp</string>
+				<key>subtext</key>
+				<string>Select multiple clipboard items and format as list</string>
+				<key>text</key>
+				<string>Multi Paste</string>
+				<key>withspace</key>
+				<false/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.keyword</string>
+			<key>uid</key>
+			<string>KEYWORD-001</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+	</array>
+	<key>readme</key>
+	<string>## Multi Paste
+
+Select multiple clipboard items and paste them as a formatted list.
+
+### Usage
+
+1. Type `mp` or `multi paste` in Alfred
+2. Press Enter to launch the picker
+3. Use TAB to select multiple items in fzf
+4. Press Enter to confirm selection
+5. Choose output format (dash list, numbered, etc.)
+6. Text is automatically pasted to the original app
+
+### Keyboard Shortcuts
+
+- TAB: Toggle selection
+- Ctrl+A: Select all
+- Enter: Confirm
+- Escape: Cancel</string>
+	<key>uidata</key>
+	<dict>
+		<key>4220135A-7E73-47EC-BEE3-F83F6E0B37DC</key>
+		<dict>
+			<key>xpos</key>
+			<real>40</real>
+			<key>ypos</key>
+			<real>155</real>
+		</dict>
+		<key>CLIPBOARD-001</key>
+		<dict>
+			<key>xpos</key>
+			<real>450</real>
+			<key>ypos</key>
+			<real>155</real>
+		</dict>
+		<key>KEYWORD-001</key>
+		<dict>
+			<key>xpos</key>
+			<real>40</real>
+			<key>ypos</key>
+			<real>270</real>
+		</dict>
+		<key>SCRIPT-001</key>
+		<dict>
+			<key>xpos</key>
+			<real>250</real>
+			<key>ypos</key>
+			<real>155</real>
+		</dict>
+	</dict>
+	<key>userconfigurationconfig</key>
+	<array/>
+	<key>variablesdontexport</key>
+	<array/>
+	<key>version</key>
+	<string>0.1.0</string>
+	<key>webaddress</key>
+	<string></string>
+</dict>
+</plist>
