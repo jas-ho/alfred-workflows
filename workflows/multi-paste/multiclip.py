@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 import os
+import re
+import shlex
 import shutil
 import sqlite3
 import subprocess
@@ -86,6 +88,10 @@ def _write_fzf_input(rows: List[Tuple[int, str]]) -> bytes:
 
 
 def _run_fzf_select(rows: List[Tuple[int, str]]) -> List[int]:
+    preview_cmd = (
+        f"{shlex.quote(sys.executable)} "
+        f"{shlex.quote(os.path.abspath(__file__))} --preview {{1}}"
+    )
     fzf_cmd = [
         "fzf",
         "--multi",
@@ -94,7 +100,7 @@ def _run_fzf_select(rows: List[Tuple[int, str]]) -> List[int]:
         "--with-nth=2..",
         "--delimiter=\t",
         "--preview",
-        f"{sys.executable} {os.path.abspath(__file__)} --preview {{1}}",
+        preview_cmd,
         "--preview-window=right:50%:wrap",
         "--header=TAB=select  Ctrl-A=all  Ctrl-D=none  Enter=confirm",
         "--bind=ctrl-a:select-all,ctrl-d:deselect-all",
@@ -199,10 +205,31 @@ _def_trim_for_lists = {
     "Plain (newlines)",
 }
 
+_list_output_formats = {
+    "Dash list",
+    "Numbered list",
+    "Bullet points",
+}
+
+_unordered_list_prefix = re.compile(r"^[ \t]*[-*+•][ \t]+(.*)$")
+_ordered_list_prefix = re.compile(r"^[ \t]*\d{1,3}[.)][ \t]+(.*)$")
+
+
+def _strip_single_list_marker(item: str) -> str:
+    first_line, sep, remainder = item.partition("\n")
+    match = _unordered_list_prefix.match(first_line)
+    if match is None:
+        match = _ordered_list_prefix.match(first_line)
+    if match is None:
+        return item
+    return match.group(1) + sep + remainder
+
 
 def _format_items(fmt: str, items: List[str]) -> str:
     if fmt in _def_trim_for_lists:
         items = _trim_blank_lines(items)
+    if fmt in _list_output_formats:
+        items = [_strip_single_list_marker(i) for i in items]
     if fmt == "Dash list":
         return "\n".join(f"- {i}" for i in items)
     if fmt == "Numbered list":
