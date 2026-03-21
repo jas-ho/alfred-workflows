@@ -168,4 +168,9 @@ uv sync --dev
 uv run pytest
 ```
 
+Test conventions:
+- Put tests in `tests/*_test.py` (pytest-discovered).
+- Prefer parametrized tests for input/output matrices.
+- Keep workflow logic in small pure helpers where possible to make testing easy.
+
 See [CLAUDE.md](CLAUDE.md) for detailed development docs.

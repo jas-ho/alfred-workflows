@@ -51,3 +51,8 @@ plutil -convert xml1 workflows/<name>/info.plist                   # ensure diff
 uv sync --dev
 uv run pytest
 ```
+
+Conventions:
+- Add tests under `tests/*_test.py` so pytest discovers them.
+- Use `@pytest.mark.parametrize` for table-driven behavior checks.
+- Prefer extracting pure helper functions from workflow scripts when logic needs unit tests.
