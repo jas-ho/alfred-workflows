@@ -4,6 +4,7 @@ import re
 _WRAPPER_MARKERS = "•⏺"
 _BULLETS = "-*+•◦▪▸→▶►➤·⏺"
 _WHITESPACE = " \t\u00a0"
+# Dedent should treat tabs as semantic indentation and leave them untouched.
 _SPACES_ONLY = " \u00a0"
 _BOX = "┌┬┐└┴┘│─"
 
@@ -155,6 +156,8 @@ def _list_indent_in_context(lines, idx):
     m = _ORDERED.match(line)
     if m:
         return _leading_indent(m.group(1))
+    # 4+ digit numeric markers are list items only when context confirms
+    # neighboring ordered items at the same indent.
     m = _ORDERED_ANY.match(line)
     if not m:
         return None
@@ -188,6 +191,10 @@ def _looks_like_code(line):
 
 
 def _strip_single_wrapper_marker(lines):
+    """Strip one top-level Claude/Codex wrapper marker when evidence is strong.
+
+    This is intentionally conservative so normal bullet lists are preserved.
+    """
     first_idx = None
     for i, line in enumerate(lines):
         if line.strip():
@@ -238,6 +245,7 @@ def _strip_single_wrapper_marker(lines):
 
 
 def clean(text):
+    """Normalize copied text while preserving Markdown structure boundaries."""
     lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
     lines = _common_dedent(lines)
     lines = _strip_single_wrapper_marker(lines)

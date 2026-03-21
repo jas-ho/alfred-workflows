@@ -206,6 +206,11 @@ def test_table_rows_preserved():
         "| a | b |\n| c | d |\n",
         "| a | b |\n| c | d |",
     )
+    expect_equal_raw(
+        "ascii plus table",
+        "+---+---+\n| a | b |\n+---+---+\n",
+        "+---+---+\n| a | b |\n+---+---+",
+    )
 
 
 def test_tabs_preserved():
