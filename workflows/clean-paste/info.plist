@@ -91,9 +91,9 @@
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
-				<string>clean.py</string>
+				<string>./clean.py</string>
 				<key>type</key>
-				<integer>9</integer>
+				<integer>8</integer>
 			</dict>
 			<key>type</key>
 			<string>alfred.workflow.action.script</string>

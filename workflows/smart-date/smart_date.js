@@ -1,3 +1,4 @@
+#!/usr/bin/osascript -l JavaScript
 ObjC.import('Foundation');
 
 function run(argv) {

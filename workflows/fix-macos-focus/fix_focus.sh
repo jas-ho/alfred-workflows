@@ -1,3 +1,4 @@
+#!/bin/bash
 # fix-macos-focus: Workaround for macOS window focus bug
 # https://hynek.me/til/macos-window-focus-desktops/
 #

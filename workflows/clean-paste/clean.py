@@ -1,4 +1,4 @@
-\
+#!/usr/bin/env python3
 import re, sys, textwrap, subprocess
 
 _BULLETS = "-*•◦▪▸→▶►➤·⏺"

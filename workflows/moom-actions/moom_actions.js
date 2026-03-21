@@ -1,3 +1,4 @@
+#!/usr/bin/osascript -l JavaScript
 function run(argv) {
     const app = Application("Moom");
     const rawActions = app.listOfActions();

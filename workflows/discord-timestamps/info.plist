@@ -83,13 +83,13 @@
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
-				<string>discord_timestamps.js</string>
+				<string>./discord_timestamps.js</string>
 				<key>subtext</key>
 				<string></string>
 				<key>title</key>
 				<string>Discord Timestamp</string>
 				<key>type</key>
-				<integer>7</integer>
+				<integer>8</integer>
 				<key>withspace</key>
 				<true/>
 			</dict>
