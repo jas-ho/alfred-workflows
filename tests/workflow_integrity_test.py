@@ -40,10 +40,14 @@ def test_python_scripts_compile():
 def test_shell_scripts_parse():
     sh_files = sorted(WORKFLOWS.glob("**/*.sh")) + [ROOT / "build.sh", ROOT / "dev-setup.sh"]
     assert sh_files, "No shell scripts found"
+    zsh = shutil.which("zsh")
     for path in sh_files:
         first_line = path.read_text(encoding="utf-8", errors="replace").splitlines()[0] if path.exists() else ""
         if "zsh" in first_line:
-            _run(["zsh", "-n", str(path)])
+            if zsh is None:
+                print(f"Skipping zsh syntax check: {path.name} (zsh not found)")
+                continue
+            _run([zsh, "-n", str(path)])
         else:
             _run(["bash", "-n", str(path)])
 

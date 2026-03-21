@@ -50,6 +50,7 @@ find_installed_target() {
         if (( ${#bundle_matches[@]} > 1 )); then
             echo "  WARN  $(basename "$source") (multiple bundleid matches; using first)" >&2
         fi
+        # zsh arrays are 1-indexed (not bash-style 0-indexed).
         echo "${bundle_matches[1]}"
         return 0
     fi
