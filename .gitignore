@@ -4,3 +4,11 @@
 # Claude Code local settings
 .claude/
 tmp/
+
+# Dev setup backups
+*.bak
+
+# Scratch files
+input.md
+output.md
+raw_clipboard.txt
