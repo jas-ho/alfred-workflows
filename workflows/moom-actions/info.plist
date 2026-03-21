@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>bundleid</key>
-	<string>com.custom.moom-actions</string>
+	<string>com.jason.alfred.moom-actions</string>
 	<key>category</key>
 	<string>Productivity</string>
 	<key>connections</key>
@@ -64,13 +64,13 @@
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
-				<string>moom_actions.js</string>
+				<string>./moom_actions.js</string>
 				<key>subtext</key>
 				<string>Search Moom window actions</string>
 				<key>title</key>
 				<string>Moom Actions</string>
 				<key>type</key>
-				<integer>7</integer>
+				<integer>8</integer>
 				<key>withspace</key>
 				<false/>
 			</dict>

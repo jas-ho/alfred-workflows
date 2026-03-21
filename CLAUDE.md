@@ -19,9 +19,9 @@
 
 1. Create workflow in Alfred Preferences (generates a new UUID dir)
 2. `mkdir workflows/<new-name>` and move contents from Alfred's UUID dir
-3. Extract substantial scripts to standalone files, set `scriptfile` in plist
-4. Add UUID mapping to `dev-setup.sh`
-5. Replace Alfred's UUID dir with symlink to `workflows/<new-name>/`
+3. Extract substantial scripts to standalone files and wire them via `scriptfile`
+4. Set a stable, non-empty `bundleid` in `info.plist`
+5. Import the workflow once in Alfred, then run `./dev-setup.sh` to auto-link it
 6. Run `./build.sh` and update README
 
 ## Modifying a Workflow
@@ -33,8 +33,8 @@
 ## Script Patterns
 
 - `scriptfile` field in plist references a file relative to workflow dir
-- Script type codes: 0=bash, 5=zsh, 6=AppleScript, 7=JXA, 9=Python
-- AppleScript (type=6) does NOT support `scriptfile` - must be inline
+- Preferred in this repo: type `8` (External Script) + executable script files
+- For AppleScript-heavy workflows, keep logic in `.applescript` and invoke it from a shell wrapper scriptfile
 - Alfred sets CWD to workflow dir when running scripts
 
 ## Inspecting/Editing Plists
@@ -48,5 +48,6 @@ plutil -convert xml1 workflows/<name>/info.plist                   # ensure diff
 ## Testing
 
 ```bash
-python tests/clean_paste_test.py
+python3 tests/clean_paste_test.py
+python3 tests/workflow_integrity_test.py
 ```

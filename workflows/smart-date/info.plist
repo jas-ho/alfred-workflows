@@ -77,13 +77,13 @@
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
-				<string>smart_date.js</string>
+				<string>./smart_date.js</string>
 				<key>subtext</key>
 				<string></string>
 				<key>title</key>
 				<string>Smart Date</string>
 				<key>type</key>
-				<integer>7</integer>
+				<integer>8</integer>
 				<key>withspace</key>
 				<true/>
 			</dict>
@@ -145,13 +145,13 @@
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
-				<string>smart_date.js</string>
+				<string>./smart_date.js</string>
 				<key>subtext</key>
 				<string></string>
 				<key>title</key>
 				<string>Smart Date</string>
 				<key>type</key>
-				<integer>7</integer>
+				<integer>8</integer>
 				<key>withspace</key>
 				<true/>
 			</dict>

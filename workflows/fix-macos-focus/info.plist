@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>bundleid</key>
-	<string></string>
+	<string>com.jason.alfred.fix-macos-focus</string>
 	<key>category</key>
 	<string>Productivity</string>
 	<key>connections</key>
@@ -44,9 +44,9 @@
 				<key>scriptargtype</key>
 				<integer>1</integer>
 				<key>scriptfile</key>
-				<string>fix_focus.sh</string>
+				<string>./fix_focus.sh</string>
 				<key>type</key>
-				<integer>0</integer>
+				<integer>8</integer>
 			</dict>
 			<key>type</key>
 			<string>alfred.workflow.action.script</string>

@@ -149,6 +149,7 @@ Workflows are stored as unpacked source directories in `workflows/`. Scripts are
 
 ```bash
 # Set up symlinks for live editing (one-time)
+# Links only workflows already imported in Alfred (import from dist/ first).
 ./dev-setup.sh
 
 # Edit scripts directly - changes are picked up by Alfred instantly
@@ -158,7 +159,8 @@ vim workflows/clean-paste/clean.py
 ./build.sh
 
 # Run tests
-python tests/clean_paste_test.py
+python3 tests/clean_paste_test.py
+python3 tests/workflow_integrity_test.py
 ```
 
 See [CLAUDE.md](CLAUDE.md) for detailed development docs.
