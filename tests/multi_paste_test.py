@@ -1,6 +1,8 @@
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 MULTICLIP = ROOT / "workflows" / "multi-paste" / "multiclip.py"
 
@@ -10,49 +12,36 @@ assert spec.loader is not None
 spec.loader.exec_module(module)
 
 
-def test_dash_list_strips_ordered_prefixes():
-    output = module._format_items(
-        "Dash list",
-        [
-            "1. one",
-            "2. two",
-            "3. three",
-        ],
-    )
-    assert output == "- one\n- two\n- three"
-
-
-def test_numbered_list_strips_unordered_prefixes():
-    output = module._format_items(
-        "Numbered list",
-        [
-            "- one",
-            "- two",
-            "- three",
-        ],
-    )
-    assert output == "1. one\n2. two\n3. three"
-
-
-def test_list_reformat_only_strips_single_marker():
-    output = module._format_items(
-        "Numbered list",
-        ["- - nested"],
-    )
-    assert output == "1. - nested"
-
-
-def test_plain_format_keeps_existing_list_prefixes():
-    output = module._format_items(
-        "Plain (newlines)",
-        ["- one", "2. two"],
-    )
-    assert output == "- one\n2. two"
-
-
-def test_dash_list_does_not_strip_year_like_prefix():
-    output = module._format_items(
-        "Dash list",
-        ["2026. was weird"],
-    )
-    assert output == "- 2026. was weird"
+@pytest.mark.parametrize(
+    ("fmt", "items", "expected"),
+    [
+        (
+            "Dash list",
+            ["1. one", "2. two", "3. three"],
+            "- one\n- two\n- three",
+        ),
+        (
+            "Numbered list",
+            ["- one", "- two", "- three"],
+            "1. one\n2. two\n3. three",
+        ),
+        (
+            "Numbered list",
+            ["- - nested"],
+            "1. - nested",
+        ),
+        (
+            "Plain (newlines)",
+            ["- one", "2. two"],
+            "- one\n2. two",
+        ),
+        (
+            "Dash list",
+            ["2026. was weird"],
+            "- 2026. was weird",
+        ),
+    ],
+)
+def test_format_items_reformat_cases(fmt, items, expected):
+    output = module._format_items(fmt, items)
+    assert output == expected

@@ -48,6 +48,6 @@ plutil -convert xml1 workflows/<name>/info.plist                   # ensure diff
 ## Testing
 
 ```bash
-python3 tests/clean_paste_test.py
-python3 tests/workflow_integrity_test.py
+uv sync --dev
+uv run pytest
 ```

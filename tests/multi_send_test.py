@@ -1,6 +1,8 @@
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 MULTISEND = ROOT / "workflows" / "multi-send" / "multisend.py"
 
@@ -10,24 +12,37 @@ assert spec.loader is not None
 spec.loader.exec_module(module)
 
 
-def test_detect_items_groups_nested_dash_lists_with_parent():
-    text = """- one
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            """- one
   - one a
   - one b
 - two
-"""
-    items = module._detect_items(text)
-    assert items == ["one\n  - one a\n  - one b", "two"]
-
-
-def test_detect_items_groups_nested_numbered_lists_with_parent():
-    text = """1. parent
+""",
+            ["one\n  - one a\n  - one b", "two"],
+        ),
+        (
+            """1. parent
    1. child a
    2. child b
 2. next
-"""
+""",
+            ["parent\n   1. child a\n   2. child b", "next"],
+        ),
+        (
+            """  - one
+    - one a
+  - two
+""",
+            ["one\n    - one a", "two"],
+        ),
+    ],
+)
+def test_detect_items_nested_grouping(text, expected):
     items = module._detect_items(text)
-    assert items == ["parent\n   1. child a\n   2. child b", "next"]
+    assert items == expected
 
 
 def test_numbered_output_keeps_nested_lines_under_same_item():
@@ -39,12 +54,3 @@ def test_numbered_output_keeps_nested_lines_under_same_item():
     items = module._detect_items(text)
     output = module._apply_output_format("Numbered list", items)
     assert output == ["1. one\n  - one a\n  - one b", "2. two"]
-
-
-def test_top_level_indent_baseline_respected():
-    text = """  - one
-    - one a
-  - two
-"""
-    items = module._detect_items(text)
-    assert items == ["one\n    - one a", "two"]

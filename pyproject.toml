@@ -1,0 +1,15 @@
+[project]
+name = "alfred-workflows"
+version = "0.1.0"
+description = "Development and test harness for Alfred workflows."
+requires-python = ">=3.9"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4,<9",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["*_test.py"]
+addopts = "-q"

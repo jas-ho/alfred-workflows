@@ -161,9 +161,11 @@ vim workflows/clean-paste/clean.py
 # Build distribution zips
 ./build.sh
 
-# Run tests
-python3 tests/clean_paste_test.py
-python3 tests/workflow_integrity_test.py
+# Install/sync test environment
+uv sync --dev
+
+# Run all tests
+uv run pytest
 ```
 
 See [CLAUDE.md](CLAUDE.md) for detailed development docs.
