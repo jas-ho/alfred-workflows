@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import re, sys, textwrap, subprocess
+import re
+import subprocess
 
 _BULLETS = "-*•◦▪▸→▶►➤·⏺"
 _WHITESPACE = " \t\u00a0"
@@ -173,5 +174,10 @@ def clean(text):
     out = strip_leading_marker(out)
     return "\n".join(out)
 
-text = subprocess.run(["pbpaste"], capture_output=True, text=True).stdout
-print(clean(text))
+def main():
+    text = subprocess.run(["pbpaste"], capture_output=True, text=True, check=False).stdout
+    print(clean(text))
+
+
+if __name__ == "__main__":
+    main()
