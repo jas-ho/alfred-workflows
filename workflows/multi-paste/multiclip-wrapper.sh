@@ -22,8 +22,11 @@ date +%s > "$START_FILE"
 rm -f "$SUCCESS_FILE"
 
 # Run main script
-~/bin/multiclip.py
-exit_code=$?
+if ~/bin/multiclip.py; then
+    exit_code=0
+else
+    exit_code=$?
+fi
 
 # If cancelled or error, ensure result is empty and no success marker
 if [[ $exit_code -ne 0 ]]; then
