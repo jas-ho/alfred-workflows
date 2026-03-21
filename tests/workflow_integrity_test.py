@@ -1,7 +1,10 @@
+import json
+import os
 import plistlib
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +18,48 @@ def _run(cmd):
         f"stdout:\n{proc.stdout}\n"
         f"stderr:\n{proc.stderr}"
     )
+
+
+def _run_with_input(cmd, text):
+    proc = subprocess.run(
+        cmd,
+        input=text,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert proc.returncode == 0, (
+        f"Command failed: {' '.join(cmd)}\n"
+        f"stdout:\n{proc.stdout}\n"
+        f"stderr:\n{proc.stderr}"
+    )
+
+
+def _iter_inline_scripts():
+    for plist_path in sorted(WORKFLOWS.glob("*/info.plist")):
+        with plist_path.open("rb") as handle:
+            plist = plistlib.load(handle)
+        for obj in plist.get("objects", []):
+            cfg = obj.get("config", {})
+            script = cfg.get("script")
+            if isinstance(script, str) and script.strip():
+                yield plist_path, obj.get("uid", "<unknown>"), int(cfg.get("type", -1)), script
+
+
+def _get_edge_workspace_list_script():
+    plist_path = WORKFLOWS / "edge-workspace-switcher" / "info.plist"
+    with plist_path.open("rb") as handle:
+        plist = plistlib.load(handle)
+    for obj in plist.get("objects", []):
+        cfg = obj.get("config", {})
+        script = cfg.get("script")
+        if (
+            isinstance(script, str)
+            and "WorkspacesCache" in script
+            and "workspaces_v2" in script
+        ):
+            return script
+    raise AssertionError("Edge workspace listing script not found in info.plist")
 
 
 def test_scriptfile_references_exist():
@@ -63,16 +108,139 @@ def test_js_scripts_parse():
         _run([node, "--check", str(path)])
 
 
-def run_all():
-    tests = [
-        test_scriptfile_references_exist,
-        test_python_scripts_compile,
-        test_shell_scripts_parse,
-        test_js_scripts_parse,
-    ]
-    for fn in tests:
-        fn()
+def test_inline_scripts_parse():
+    zsh = shutil.which("zsh")
+    osacompile = shutil.which("osacompile")
+
+    for plist_path, uid, script_type, script in _iter_inline_scripts():
+        label = f"{plist_path.name}:{uid}"
+        if script_type == 0:  # bash
+            _run_with_input(["bash", "-n"], script)
+            continue
+        if script_type == 5:  # zsh
+            if zsh is None:
+                print(f"Skipping zsh inline syntax check: {label} (zsh not found)")
+                continue
+            _run_with_input([zsh, "-n"], script)
+            continue
+        if script_type == 6:  # AppleScript
+            if osacompile is None:
+                print(f"Skipping AppleScript inline syntax check: {label} (osacompile not found)")
+                continue
+            with tempfile.TemporaryDirectory(prefix="wf-applescript-") as tmpdir:
+                src = Path(tmpdir) / "inline.applescript"
+                out = Path(tmpdir) / "inline.scpt"
+                src.write_text(script, encoding="utf-8")
+                _run([osacompile, "-o", str(out), str(src)])
+            continue
+        if script_type == 9:  # python
+            _run_with_input(
+                [sys.executable, "-c", "import sys; compile(sys.stdin.read(), '<inline>', 'exec')"],
+                script,
+            )
+            continue
 
 
-if __name__ == "__main__":
-    run_all()
+def test_no_home_bin_dependency_in_workflow_scripts():
+    offenders = []
+    for path in sorted(WORKFLOWS.rglob("*")):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() not in {".py", ".sh", ".js", ".applescript", ".plist"}:
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if "~/bin/" in text or "$HOME/bin/" in text:
+            offenders.append(str(path))
+    assert not offenders, "Hardcoded ~/bin dependencies found:\n" + "\n".join(offenders)
+
+
+def test_edge_workspace_v2_fallback_when_v1_cache_is_invalid():
+    jq = shutil.which("jq")
+    if jq is None:
+        print("Skipping Edge fallback test: jq not found")
+        return
+
+    script = _get_edge_workspace_list_script()
+    with tempfile.TemporaryDirectory(prefix="edge-home-") as tmp_home:
+        edge_default = Path(tmp_home) / "Library/Application Support/Microsoft Edge/Default"
+        workspaces_dir = edge_default / "Workspaces"
+        workspaces_dir.mkdir(parents=True, exist_ok=True)
+
+        cache = workspaces_dir / "WorkspacesCache"
+        cache.write_text("{invalid", encoding="utf-8")
+
+        bookmarks = edge_default / "Bookmarks"
+        bookmarks.write_text(
+            json.dumps(
+                {
+                    "roots": {
+                        "workspaces_v2": {
+                            "children": [
+                                {"type": "folder", "name": "Fallback Workspace", "guid": "ws-guid-1"},
+                                {"type": "url", "name": "Ignore Me"},
+                            ]
+                        }
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        env = dict(os.environ)
+        env["HOME"] = tmp_home
+        proc = subprocess.run(
+            ["bash", "-c", script, "edge-workspace-list", "fallback"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
+        assert proc.returncode == 0, (
+            f"Edge script failed\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
+        )
+        payload = json.loads(proc.stdout)
+        items = payload.get("items", [])
+        assert any(item.get("title") == "Fallback Workspace" for item in items), payload
+
+
+def test_edge_workspace_v1_query_filtering():
+    jq = shutil.which("jq")
+    if jq is None:
+        print("Skipping Edge query filtering test: jq not found")
+        return
+
+    script = _get_edge_workspace_list_script()
+    with tempfile.TemporaryDirectory(prefix="edge-home-") as tmp_home:
+        edge_default = Path(tmp_home) / "Library/Application Support/Microsoft Edge/Default"
+        workspaces_dir = edge_default / "Workspaces"
+        workspaces_dir.mkdir(parents=True, exist_ok=True)
+
+        cache = workspaces_dir / "WorkspacesCache"
+        cache.write_text(
+            json.dumps(
+                {
+                    "workspaces": [
+                        {"id": "ws-1", "name": "Alpha Workspace"},
+                        {"id": "ws-2", "name": "Beta Space"},
+                        {"id": "ws-3", "name": "Alphabet Soup"},
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        env = dict(os.environ)
+        env["HOME"] = tmp_home
+        proc = subprocess.run(
+            ["bash", "-c", script, "edge-workspace-list", "alp"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
+        assert proc.returncode == 0, (
+            f"Edge script failed\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
+        )
+        payload = json.loads(proc.stdout)
+        items = payload.get("items", [])
+        assert [item.get("title") for item in items] == ["Alpha Workspace", "Alphabet Soup"], payload

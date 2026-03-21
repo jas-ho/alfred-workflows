@@ -9,6 +9,8 @@ from typing import List, Optional
 
 DEFAULT_DELAY_SEC = 0.25
 
+_LIST_PREFIX_RE = re.compile(r"^([ \t]*)(?:[-–—•\u2022]|\d+[.)])\s+(.*)$")
+
 
 def _fail(msg: str, code: int = 1) -> None:
     print(msg, file=sys.stderr)
@@ -26,28 +28,30 @@ def _get_clipboard() -> str:
 def _detect_items(text: str) -> List[str]:
     lines = text.splitlines()
 
-    dash_re = re.compile(r"^\s*[-–—]\s+(.*)$")
-    bullet_re = re.compile(r"^\s*[•\u2022]\s+(.*)$")
-    num_re = re.compile(r"^\s*\d+[\.)]\s+(.*)$")
+    def _indent_width(indent: str) -> int:
+        return len(indent.expandtabs(4))
 
-    def match_prefix(line: str) -> Optional[str]:
-        for regex in (dash_re, bullet_re, num_re):
-            m = regex.match(line)
-            if m:
-                return m.group(1)
-        return None
+    def match_prefix(line: str) -> Optional[tuple[int, str]]:
+        m = _LIST_PREFIX_RE.match(line)
+        if not m:
+            return None
+        return _indent_width(m.group(1)), m.group(2)
 
     matched = 0
     nonempty = 0
+    match_indents: List[int] = []
     for line in lines:
         raw = line.rstrip()
         if not raw:
             continue
         nonempty += 1
-        if match_prefix(raw) is not None:
+        match = match_prefix(raw)
+        if match is not None:
             matched += 1
+            match_indents.append(match[0])
 
     list_mode = matched >= 2 or (matched >= 1 and nonempty >= 3)
+    top_level_indent = min(match_indents) if list_mode and match_indents else 0
 
     items: List[str] = []
     current: List[str] = []
@@ -58,12 +62,12 @@ def _detect_items(text: str) -> List[str]:
             continue
 
         if list_mode:
-            content = match_prefix(raw)
-            if content is not None:
+            match = match_prefix(raw)
+            if match is not None and match[0] == top_level_indent:
                 if current:
                     items.append("\n".join(current))
                     current = []
-                current.append(content)
+                current.append(match[1])
             else:
                 if current:
                     current.append(raw)

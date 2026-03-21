@@ -6,6 +6,7 @@ set -euo pipefail
 # Add fzf to PATH (installed at ~/.fzf/bin)
 export PATH="$HOME/.fzf/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PID_FILE="${MP_PID_FILE:-/tmp/mp-pid}"
 START_FILE="${MP_START_FILE:-/tmp/mp-start}"
 RESULT_FILE="${MP_RESULT_FILE:-/tmp/mp-result}"
@@ -22,7 +23,7 @@ date +%s > "$START_FILE"
 rm -f "$SUCCESS_FILE"
 
 # Run main script
-if ~/bin/multiclip.py; then
+if "$SCRIPT_DIR/multiclip.py"; then
     exit_code=0
 else
     exit_code=$?

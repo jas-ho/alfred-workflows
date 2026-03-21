@@ -21,7 +21,10 @@ brew install jq cliclick fzf
 
 **Keyword:** `ew`
 
-Quickly switch between Microsoft Edge workspaces. Lists all workspaces from Edge's cache and lets you filter/select one to switch to.
+Quickly switch between Microsoft Edge workspaces. Lists workspaces from Edge data files and lets you filter/select one to switch to.
+
+**Known issue (Edge 146+ / Workspace V2):** Listing works, but opening/switching is currently broken.  
+Track status in [Issue #4](https://github.com/jas-ho/alfred-workflows/issues/4).
 
 **Dependencies:** [jq](https://jqlang.github.io/jq/)
 
@@ -158,9 +161,16 @@ vim workflows/clean-paste/clean.py
 # Build distribution zips
 ./build.sh
 
-# Run tests
-python3 tests/clean_paste_test.py
-python3 tests/workflow_integrity_test.py
+# Install/sync test environment
+uv sync --dev
+
+# Run all tests
+uv run pytest
 ```
+
+Test conventions:
+- Put tests in `tests/*_test.py` (pytest-discovered).
+- Prefer parametrized tests for input/output matrices.
+- Keep workflow logic in small pure helpers where possible to make testing easy.
 
 See [CLAUDE.md](CLAUDE.md) for detailed development docs.

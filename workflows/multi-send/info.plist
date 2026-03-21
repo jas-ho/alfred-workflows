@@ -83,7 +83,7 @@
 				<integer>0</integer>
 				<key>script</key>
 				<string>#!/bin/bash
-"$HOME/bin/multisend.py" --format "$1"
+./multisend.py --format "$1"
 </string>
 				<key>scriptargtype</key>
 				<integer>1</integer>

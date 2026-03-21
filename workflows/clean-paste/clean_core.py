@@ -338,7 +338,7 @@ def clean(text):
                 flush_list()
                 result.append(line)
                 in_code = True
-                code_indent = indent if not line.startswith("\t") else list_indent + 4
+                code_indent = list_indent + 4
                 i += 1
                 continue
             if indent >= list_indent + 4:
