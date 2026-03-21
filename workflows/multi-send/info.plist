@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>bundleid</key>
-	<string></string>
+	<string>com.jason.alfred.multi-send</string>
 	<key>connections</key>
 	<dict>
 		<key>LISTFILTER-MS</key>

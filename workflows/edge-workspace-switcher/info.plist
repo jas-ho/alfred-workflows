@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>bundleid</key>
-	<string>test12</string>
+	<string>com.jason.alfred.edge-workspace-switcher</string>
 	<key>category</key>
 	<string>Internet</string>
 	<key>connections</key>

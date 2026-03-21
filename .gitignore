@@ -12,3 +12,8 @@ tmp/
 input.md
 output.md
 raw_clipboard.txt
+
+# Python cache/test artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/

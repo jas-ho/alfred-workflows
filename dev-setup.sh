@@ -13,29 +13,70 @@ if [ ! -d "$ALFRED_WORKFLOWS" ]; then
     exit 1
 fi
 
-# Workflow name -> installed UUID mapping
-# These are specific to your Alfred installation. On a fresh machine,
-# import the workflow once from dist/ to get a UUID, then add it here.
-typeset -A UUIDS=(
-    clean-paste           "user.workflow.09D15CF0-DFF0-4570-A571-A1389DC9D4E1"
-    discord-timestamps    "user.workflow.1FAFA37D-0205-4BBD-BD2A-EE8FB277013E"
-    edge-workspace-switcher "user.workflow.36FB57F7-E96E-429A-B3B0-25A3DAA451FE"
-    fix-macos-focus       "user.workflow.39B4598F-AF39-4AA2-887E-B4EE72072475"
-    moom-actions          "user.workflow.7D62C6B5-A9A6-4E37-A4D8-D0132007C023"
-    multi-paste           "user.workflow.4609357C-0269-400E-8CE3-8AF2A34C0C0E"
-    multi-send            "user.workflow.90C619B6-35F6-4F75-9903-D162EC852D83"
-    smart-date            "user.workflow.D4A7E2B1-3F5C-4A8D-B9E6-1C2D3E4F5A6B"
-)
+plist_raw() {
+    local plist="$1"
+    local key="$2"
+    plutil -extract "$key" raw "$plist" 2>/dev/null || true
+}
+
+find_installed_target() {
+    local source="$1"
+    local source_info="$source/info.plist"
+    local source_name source_bundle
+    local target target_info target_name target_bundle
+    local -a bundle_matches=()
+    local -a name_matches=()
+
+    source_name="$(plist_raw "$source_info" name)"
+    source_bundle="$(plist_raw "$source_info" bundleid)"
+
+    for target in "$ALFRED_WORKFLOWS"/user.workflow.*; do
+        [ -e "$target" ] || continue
+        target_info="$target/info.plist"
+        [ -f "$target_info" ] || continue
+
+        target_name="$(plist_raw "$target_info" name)"
+        target_bundle="$(plist_raw "$target_info" bundleid)"
+
+        if [ -n "$source_bundle" ] && [ "$source_bundle" != "(null)" ] && [ "$target_bundle" = "$source_bundle" ]; then
+            bundle_matches+=("$target")
+        fi
+        if [ -n "$source_name" ] && [ "$target_name" = "$source_name" ]; then
+            name_matches+=("$target")
+        fi
+    done
+
+    if (( ${#bundle_matches[@]} > 0 )); then
+        if (( ${#bundle_matches[@]} > 1 )); then
+            echo "  WARN  $(basename "$source") (multiple bundleid matches; using first)" >&2
+        fi
+        # zsh arrays are 1-indexed (not bash-style 0-indexed).
+        echo "${bundle_matches[1]}"
+        return 0
+    fi
+
+    if (( ${#name_matches[@]} > 0 )); then
+        if (( ${#name_matches[@]} > 1 )); then
+            echo "  WARN  $(basename "$source") (multiple name matches; using first)" >&2
+        fi
+        echo "${name_matches[1]}"
+        return 0
+    fi
+
+    return 1
+}
 
 echo "Setting up Alfred workflow symlinks..."
 echo ""
 
-for name uuid in "${(@kv)UUIDS}"; do
-    target="$ALFRED_WORKFLOWS/$uuid"
-    source="$REPO_DIR/workflows/$name"
+for source in "$REPO_DIR"/workflows/*/; do
+    [ -d "$source" ] || continue
+    source="${source%/}"
+    name="$(basename "$source")"
+    target="$(find_installed_target "$source" || true)"
 
-    if [ ! -d "$source" ]; then
-        echo "  SKIP  $name (source dir missing)"
+    if [ -z "$target" ]; then
+        echo "  SKIP  $name (not installed in Alfred; import from dist/ once, then re-run)"
         continue
     fi
 
@@ -52,14 +93,12 @@ for name uuid in "${(@kv)UUIDS}"; do
     fi
 
     if [ -d "$target" ]; then
-        backup="${target}.bak"
+        backup="${target}.bak.$(date +%Y%m%d%H%M%S)"
         echo "  LINK  $name (backing up existing to $(basename "$backup"))"
-        if [ -d "$backup" ]; then
-            rm -rf "$backup"
-        fi
         mv "$target" "$backup"
     else
-        echo "  LINK  $name (new install)"
+        echo "  SKIP  $name (target path missing: $(basename "$target"))"
+        continue
     fi
 
     ln -s "$source" "$target"

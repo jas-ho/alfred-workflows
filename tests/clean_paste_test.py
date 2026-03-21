@@ -1,4 +1,4 @@
-from importlib import util
+import importlib.util
 from pathlib import Path
 from textwrap import dedent
 
@@ -7,9 +7,11 @@ SCRIPT = ROOT / "workflows" / "clean-paste" / "clean_core.py"
 
 
 def load_clean():
-    spec = util.spec_from_file_location("clean_core", SCRIPT)
-    module = util.module_from_spec(spec)
-    assert spec and spec.loader
+    """Load the workflow's clean() function from the standalone script."""
+    spec = importlib.util.spec_from_file_location("clean_paste_script", SCRIPT)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Failed to load module spec from {SCRIPT}")
+    module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module.clean
 
