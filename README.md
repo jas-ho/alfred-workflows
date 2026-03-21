@@ -21,7 +21,10 @@ brew install jq cliclick fzf
 
 **Keyword:** `ew`
 
-Quickly switch between Microsoft Edge workspaces. Lists all workspaces from Edge's cache and lets you filter/select one to switch to.
+Quickly switch between Microsoft Edge workspaces. Lists workspaces from Edge data files and lets you filter/select one to switch to.
+
+**Known issue (Edge 146+ / Workspace V2):** Listing works, but opening/switching is currently broken.  
+Track status in [Issue #4](https://github.com/jas-ho/alfred-workflows/issues/4).
 
 **Dependencies:** [jq](https://jqlang.github.io/jq/)
 

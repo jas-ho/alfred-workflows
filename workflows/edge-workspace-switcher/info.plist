@@ -62,30 +62,68 @@
 				<key>script</key>
 				<string>#!/usr/bin/env bash
 CACHE="$HOME/Library/Application Support/Microsoft Edge/Default/Workspaces/WorkspacesCache"
+BOOKMARKS="$HOME/Library/Application Support/Microsoft Edge/Default/Bookmarks"
 
 if ! command -v jq &gt;/dev/null 2&gt;/dev/null; then
   printf '{"items":[{"title":"jq not found","subtitle":"Install jq to use Edge Workspace Switcher","valid":false}]}\n'
   exit 0
 fi
 
-if [[ ! -f "$CACHE" ]]; then
-  printf '{"items":[{"title":"Edge workspaces cache not found","subtitle":"Open Edge and enable Workspaces first","valid":false}]}\n'
-  exit 0
-fi
-
-# Optional: let Alfred pass the query as $1 to filter names.
 # Use tr for Bash 3.2 compatibility on macOS.
 QUERY="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+ITEMS='[]'
 
-jq --arg q "$QUERY" '
-{
-  items: [
-    .workspaces[]
-    | select(.name|ascii_downcase|contains($q))
-    | {uid: .id, title: .name, arg: .id}
-  ]
-}
-' "$CACHE"
+# Edge Workspace V1 source.
+if [[ -f "$CACHE" ]]; then
+  ITEMS="$(
+    jq --arg q "$QUERY" '
+      [
+        .workspaces[]?
+        | select((.name // "" | ascii_downcase) | contains($q))
+        | {uid: .id, title: .name, arg: .id}
+      ]
+    ' "$CACHE" 2&gt;/dev/null
+  )"
+fi
+
+# Edge Workspace V2 source (Edge 146+): workspace folders in Bookmarks.
+if [[ "$ITEMS" == '[]' ]] &amp;&amp; [[ -f "$BOOKMARKS" ]]; then
+  ITEMS="$(
+    jq --arg q "$QUERY" '
+      [
+        .roots.workspaces_v2.children[]?
+        | select(.type == "folder")
+        | select((.name // "" | ascii_downcase) | contains($q))
+        | {
+            uid: (.guid // .id // .name),
+            title: .name,
+            arg: (.guid // .id // .name),
+            subtitle: "Workspace V2 source (Bookmarks)"
+          }
+      ]
+    ' "$BOOKMARKS" 2&gt;/dev/null
+  )"
+fi
+
+if [[ -z "$ITEMS" ]] || [[ "$ITEMS" == "null" ]]; then
+  ITEMS='[]'
+fi
+
+jq -n --argjson items "$ITEMS" '
+  if ($items | length) &gt; 0 then
+    {items: $items}
+  else
+    {
+      items: [
+        {
+          title: "No Edge workspaces found",
+          subtitle: "Open/create a workspace in Edge. V2 is read from Bookmarks.",
+          valid: false
+        }
+      ]
+    }
+  end
+'
 </string>
 				<key>scriptargtype</key>
 				<integer>1</integer>
