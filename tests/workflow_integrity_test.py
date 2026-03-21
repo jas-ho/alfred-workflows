@@ -201,3 +201,46 @@ def test_edge_workspace_v2_fallback_when_v1_cache_is_invalid():
         payload = json.loads(proc.stdout)
         items = payload.get("items", [])
         assert any(item.get("title") == "Fallback Workspace" for item in items), payload
+
+
+def test_edge_workspace_v1_query_filtering():
+    jq = shutil.which("jq")
+    if jq is None:
+        print("Skipping Edge query filtering test: jq not found")
+        return
+
+    script = _get_edge_workspace_list_script()
+    with tempfile.TemporaryDirectory(prefix="edge-home-") as tmp_home:
+        edge_default = Path(tmp_home) / "Library/Application Support/Microsoft Edge/Default"
+        workspaces_dir = edge_default / "Workspaces"
+        workspaces_dir.mkdir(parents=True, exist_ok=True)
+
+        cache = workspaces_dir / "WorkspacesCache"
+        cache.write_text(
+            json.dumps(
+                {
+                    "workspaces": [
+                        {"id": "ws-1", "name": "Alpha Workspace"},
+                        {"id": "ws-2", "name": "Beta Space"},
+                        {"id": "ws-3", "name": "Alphabet Soup"},
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        env = dict(os.environ)
+        env["HOME"] = tmp_home
+        proc = subprocess.run(
+            ["bash", "-c", script, "edge-workspace-list", "alp"],
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=env,
+        )
+        assert proc.returncode == 0, (
+            f"Edge script failed\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
+        )
+        payload = json.loads(proc.stdout)
+        items = payload.get("items", [])
+        assert [item.get("title") for item in items] == ["Alpha Workspace", "Alphabet Soup"], payload
