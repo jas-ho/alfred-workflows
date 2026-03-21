@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>bundleid</key>
-	<string>com.custom.moom-actions</string>
+	<string>com.jason.alfred.moom-actions</string>
 	<key>category</key>
 	<string>Productivity</string>
 	<key>connections</key>
