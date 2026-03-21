@@ -1,22 +1,15 @@
-import plistlib
 from pathlib import Path
-import zipfile
 from textwrap import dedent
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ROOT / "Clean Paste.alfredworkflow"
+SCRIPT = ROOT / "workflows" / "clean-paste" / "clean.py"
 
 
 def load_clean():
-    """Load the workflow's clean() function from the packaged plist."""
-    with zipfile.ZipFile(WORKFLOW) as zf:
-        plist = plistlib.loads(zf.read("info.plist"))
-    script = plist["objects"][1]["config"]["script"]
-    lines = []
-    for line in script.splitlines():
-        if line.startswith("text = subprocess.run"):
-            break  # drop runtime invocation
-        lines.append(line)
+    """Load the workflow's clean() function from the standalone script."""
+    code = SCRIPT.read_text()
+    lines = [l for l in code.splitlines()
+             if not l.startswith("text = subprocess.run") and not l.startswith("print(clean(")]
     namespace = {}
     exec("\n".join(lines), namespace)
     return namespace["clean"]
@@ -156,6 +149,45 @@ def test_tabs_preserved():
     )
 
 
+def test_numbered_list_indented_continuation_joins():
+    """Wrapped numbered-list items where continuation lines are indented
+    (e.g. aligned after '1. ') should join into one line per item.
+    Must work regardless of base indent (raw 2-space, Typora 4-space, etc.)."""
+    # Uniform 2-space indent (raw Claude output)
+    expect_equal(
+        "numbered list continuation (2sp)",
+        """\
+  1. First point starts here
+  and continues on the next line
+    with deeper-indented wrap.
+  2. Second point is short.
+""",
+        """\
+1. First point starts here
+and continues on the next line with deeper-indented wrap.
+2. Second point is short.""",
+    )
+    # 4-space list with 7/9-space continuations (Typora-style reformat)
+    expect_equal(
+        "numbered list continuation (4sp Typora)",
+        """\
+    1. First item starts here
+       continuation line
+         deeper continuation.
+    2. Second item.""",
+        """\
+1. First item starts here
+continuation line deeper continuation.
+2. Second item.""",
+    )
+
+
+# Known limitation: unfenced code after prose continuation gets joined.
+# If current is non-empty (accumulating prose), an indented line is treated
+# as wrapped continuation rather than a code block. Fenced code (```) is
+# not affected. Acceptable because Claude output almost always fences code.
+
+
 def run_all():
     tests = [
         test_claude_bullet_and_box_table,
@@ -165,6 +197,7 @@ def run_all():
         test_plain_wrapped_paragraph_unwraps,
         test_ascii_table_alone_keeps_shape,
         test_tabs_preserved,
+        test_numbered_list_indented_continuation_joins,
     ]
     for fn in tests:
         fn()
