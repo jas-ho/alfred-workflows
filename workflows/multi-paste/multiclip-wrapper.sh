@@ -6,10 +6,10 @@ set -euo pipefail
 # Add fzf to PATH (installed at ~/.fzf/bin)
 export PATH="$HOME/.fzf/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
-PID_FILE="/tmp/mp-pid"
-START_FILE="/tmp/mp-start"
-RESULT_FILE="/tmp/mp-result"
-SUCCESS_FILE="/tmp/mp-success"
+PID_FILE="${MP_PID_FILE:-/tmp/mp-pid}"
+START_FILE="${MP_START_FILE:-/tmp/mp-start}"
+RESULT_FILE="${MP_RESULT_FILE:-/tmp/mp-result}"
+SUCCESS_FILE="${MP_SUCCESS_FILE:-/tmp/mp-success}"
 
 # Write our PID immediately so AppleScript can track us
 echo $$ > "$PID_FILE"
