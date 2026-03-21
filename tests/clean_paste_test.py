@@ -258,28 +258,3 @@ def test_markdown_table_without_outer_pipes():
         "a | b\n---|---\nc | d\n",
         "a | b\n---|---\nc | d",
     )
-
-
-def run_all():
-    tests = [
-        test_wrapper_marker_strips_single_container,
-        test_wrapper_marker_not_stripped_for_real_list,
-        test_fenced_code_block_is_preserved,
-        test_indented_fence_in_list_with_blank_lines_is_preserved,
-        test_plain_wrapped_paragraph_unwraps,
-        test_numbered_list_indented_continuation_joins,
-        test_multilevel_lists_preserve_structure,
-        test_markdown_structures_do_not_merge,
-        test_table_rows_preserved,
-        test_tabs_preserved,
-        test_single_wrapper_like_bullet_not_stripped,
-        test_unfenced_code_under_list_not_joined,
-        test_four_digit_ordered_list_context,
-        test_markdown_table_without_outer_pipes,
-    ]
-    for fn in tests:
-        fn()
-
-
-if __name__ == "__main__":
-    run_all()

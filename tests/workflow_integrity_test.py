@@ -201,21 +201,3 @@ def test_edge_workspace_v2_fallback_when_v1_cache_is_invalid():
         payload = json.loads(proc.stdout)
         items = payload.get("items", [])
         assert any(item.get("title") == "Fallback Workspace" for item in items), payload
-
-
-def run_all():
-    tests = [
-        test_scriptfile_references_exist,
-        test_python_scripts_compile,
-        test_shell_scripts_parse,
-        test_js_scripts_parse,
-        test_inline_scripts_parse,
-        test_no_home_bin_dependency_in_workflow_scripts,
-        test_edge_workspace_v2_fallback_when_v1_cache_is_invalid,
-    ]
-    for fn in tests:
-        fn()
-
-
-if __name__ == "__main__":
-    run_all()
