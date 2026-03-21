@@ -16,6 +16,10 @@ DEFAULT_LIMIT = 100
 MAX_DISPLAY_LEN = 80
 PREVIEW_MAX_LINES = 200
 
+# Allow orchestration wrappers to override output locations per run.
+RESULT_FILE = os.environ.get("MP_RESULT_FILE", RESULT_FILE)
+SUCCESS_FILE = os.environ.get("MP_SUCCESS_FILE", SUCCESS_FILE)
+
 
 def _fail(msg: str, code: int = 1) -> None:
     print(msg, file=sys.stderr)

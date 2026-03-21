@@ -1,3 +1,5 @@
+on run argv
+set scriptDir to item 1 of argv
 set runID to do shell script "uuidgen | tr '[:upper:]' '[:lower:]'"
 set tmpPrefix to "/tmp/mp-" & runID
 set frontAppFile to tmpPrefix & "-frontapp"
@@ -23,7 +25,8 @@ end try
 delay 0.2
 
 -- 4. Launch wrapper in Terminal (no window creation)
-set wrapperCmd to "MP_PID_FILE=" & quoted form of pidFile & " MP_START_FILE=" & quoted form of startFile & " MP_RESULT_FILE=" & quoted form of resultFile & " MP_SUCCESS_FILE=" & quoted form of successFile & " $HOME/bin/multiclip-wrapper.sh"
+set wrapperPath to scriptDir & "/multiclip-wrapper.sh"
+set wrapperCmd to "MP_PID_FILE=" & quoted form of pidFile & " MP_START_FILE=" & quoted form of startFile & " MP_RESULT_FILE=" & quoted form of resultFile & " MP_SUCCESS_FILE=" & quoted form of successFile & " " & quoted form of wrapperPath
 tell application id "com.apple.Terminal"
     activate
     set mpTab to do script wrapperCmd
@@ -81,3 +84,4 @@ end if
 do shell script "rm -f " & quoted form of frontAppFile & " " & quoted form of pidFile & " " & quoted form of resultFile & " " & quoted form of startFile & " " & quoted form of successFile
 
 return output
+end run

@@ -63,8 +63,19 @@
 				<string>#!/usr/bin/env bash
 CACHE="$HOME/Library/Application Support/Microsoft Edge/Default/Workspaces/WorkspacesCache"
 
-# optional: let Alfred pass the query as $1 to filter names
-QUERY="${1,,}"   # lower-case query
+if ! command -v jq &gt;/dev/null 2&gt;/dev/null; then
+  printf '{"items":[{"title":"jq not found","subtitle":"Install jq to use Edge Workspace Switcher","valid":false}]}\n'
+  exit 0
+fi
+
+if [[ ! -f "$CACHE" ]]; then
+  printf '{"items":[{"title":"Edge workspaces cache not found","subtitle":"Open Edge and enable Workspaces first","valid":false}]}\n'
+  exit 0
+fi
+
+# Optional: let Alfred pass the query as $1 to filter names.
+# Use tr for Bash 3.2 compatibility on macOS.
+QUERY="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
 
 jq --arg q "$QUERY" '
 {
@@ -146,6 +157,6 @@ jq --arg q "$QUERY" '
 	<key>version</key>
 	<string>0.1.0</string>
 	<key>webaddress</key>
-	<string>test12</string>
+	<string></string>
 </dict>
 </plist>
