@@ -159,6 +159,7 @@ vim workflows/clean-paste/clean.py
 
 # Run tests
 python tests/clean_paste_test.py
+python tests/workflow_integrity_test.py
 ```
 
 See [CLAUDE.md](CLAUDE.md) for detailed development docs.
