@@ -75,7 +75,7 @@ ITEMS='[]'
 
 # Edge Workspace V1 source.
 if [[ -f "$CACHE" ]]; then
-  ITEMS="$(
+  if V1_ITEMS="$(
     jq --arg q "$QUERY" '
       [
         .workspaces[]?
@@ -83,12 +83,16 @@ if [[ -f "$CACHE" ]]; then
         | {uid: .id, title: .name, arg: .id}
       ]
     ' "$CACHE" 2&gt;/dev/null
-  )"
+  )"; then
+    ITEMS="$V1_ITEMS"
+  else
+    ITEMS='[]'
+  fi
 fi
 
 # Edge Workspace V2 source (Edge 146+): workspace folders in Bookmarks.
 if [[ "$ITEMS" == '[]' ]] &amp;&amp; [[ -f "$BOOKMARKS" ]]; then
-  ITEMS="$(
+  if V2_ITEMS="$(
     jq --arg q "$QUERY" '
       [
         .roots.workspaces_v2.children[]?
@@ -102,7 +106,11 @@ if [[ "$ITEMS" == '[]' ]] &amp;&amp; [[ -f "$BOOKMARKS" ]]; then
           }
       ]
     ' "$BOOKMARKS" 2&gt;/dev/null
-  )"
+  )"; then
+    ITEMS="$V2_ITEMS"
+  else
+    ITEMS='[]'
+  fi
 fi
 
 if [[ -z "$ITEMS" ]] || [[ "$ITEMS" == "null" ]]; then

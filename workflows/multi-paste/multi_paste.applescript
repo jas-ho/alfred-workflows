@@ -45,25 +45,7 @@ repeat 20 times
 end repeat
 
 if not pidFound then
-    try
-        if terminalWasRunning then
-            tell application id "com.apple.Terminal"
-                if exists mpTab then
-                    if (count of tabs of (window of mpTab)) > 1 then
-                        close mpTab
-                    else
-                        close (window of mpTab)
-                    end if
-                end if
-            end tell
-        else
-            tell application id "com.apple.Terminal"
-                if (exists mpTab) and (busy of mpTab is false) then
-                    close (window of mpTab)
-                end if
-            end tell
-        end if
-    end try
+    my cleanupTerminal(mpTab, terminalWasRunning)
     do shell script "rm -f " & quoted form of frontAppFile & " " & quoted form of pidFile & " " & quoted form of resultFile & " " & quoted form of startFile & " " & quoted form of successFile
     return ""
 end if
@@ -101,28 +83,32 @@ if output is not "" then
 end if
 
 -- 8. Close the Terminal tab/window created for this run
-try
-    if terminalWasRunning then
-        tell application id "com.apple.Terminal"
-            if (exists mpTab) and (busy of mpTab is false) then
-                if (count of tabs of (window of mpTab)) > 1 then
-                    close mpTab
-                else
-                    close (window of mpTab)
-                end if
-            end if
-        end tell
-    else
-        tell application id "com.apple.Terminal"
-            if (exists mpTab) and (busy of mpTab is false) then
-                close (window of mpTab)
-            end if
-        end tell
-    end if
-end try
+my cleanupTerminal(mpTab, terminalWasRunning)
 
 -- 9. Cleanup this run's temp files
 do shell script "rm -f " & quoted form of frontAppFile & " " & quoted form of pidFile & " " & quoted form of resultFile & " " & quoted form of startFile & " " & quoted form of successFile
 
 return output
 end run
+
+on cleanupTerminal(mpTab, terminalWasRunning)
+    try
+        if terminalWasRunning then
+            tell application id "com.apple.Terminal"
+                if (exists mpTab) and (busy of mpTab is false) then
+                    if (count of tabs of (window of mpTab)) > 1 then
+                        close mpTab
+                    else
+                        close (window of mpTab)
+                    end if
+                end if
+            end tell
+        else
+            tell application id "com.apple.Terminal"
+                if (exists mpTab) and (busy of mpTab is false) then
+                    close (window of mpTab)
+                end if
+            end tell
+        end if
+    end try
+end cleanupTerminal
