@@ -36,6 +36,11 @@ def is_tabbed(line):
 
 def smart_dedent(text):
     lines = text.splitlines()
+    # Count structural lines at indent 0 to distinguish a single container
+    # (e.g. ⏺ wrapper) from multiple peers (e.g. numbered list items)
+    structural_at_zero = sum(1 for l in lines if l.strip() and
+        len(l) - len(l.lstrip(_WHITESPACE)) == 0 and is_structural(l))
+    skip_structural_zero = structural_at_zero == 1
     indents = []
     in_fence = False
     prev_structural = False
@@ -53,7 +58,7 @@ def smart_dedent(text):
         if is_tabbed(line):
             continue
         indent_len = len(line) - len(line.lstrip(_WHITESPACE))
-        if indent_len == 0 and is_structural(line):
+        if indent_len == 0 and is_structural(line) and skip_structural_zero:
             prev_structural = True
             continue
         if prev_structural and indent_len >= 4:
@@ -85,10 +90,13 @@ def smart_dedent(text):
             trimmed.append(line)
             continue
         indent_len = len(line) - len(line.lstrip(_WHITESPACE))
-        if indent_len == 0 and is_structural(line):
+        if indent_len == 0 and is_structural(line) and skip_structural_zero:
             prev_structural = True
-        if prev_structural and indent_len >= 4 and code_block_indent is None:
+        elif prev_structural and indent_len >= 4 and code_block_indent is None:
             code_block_indent = indent_len
+            prev_structural = False
+        else:
+            prev_structural = False
         if code_block_indent is not None and indent_len >= code_block_indent:
             trimmed.append(line)
             continue

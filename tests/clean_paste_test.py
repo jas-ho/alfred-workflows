@@ -179,6 +179,34 @@ def test_numbered_list_indented_continuation_joins():
     )
 
 
+def test_multilevel_lists():
+    """Nested lists should preserve structure while joining continuations."""
+    # Nested bullets
+    expect_equal(
+        "nested bullets",
+        "- Parent\n  - Child 1\n  - Child 2",
+        "Parent\n- Child 1\n- Child 2",
+    )
+    # Parent wraps, then children
+    expect_equal(
+        "parent wraps then children",
+        "- Parent that wraps\n  to next line\n  - Child 1\n  - Child 2",
+        "Parent that wraps to next line\n- Child 1\n- Child 2",
+    )
+    # Nested numbered with wrapping sub-item
+    expect_equal(
+        "nested numbered sub-item wraps",
+        "1. First\n   a. Sub item wraps\n      to next line\n   b. Another\n2. Second",
+        "1. First\n   a. Sub item wraps to next line\n   b. Another\n2. Second",
+    )
+    # Three-level nesting
+    expect_equal(
+        "three-level nesting",
+        "- Top\n  - Mid\n    - Deep 1\n    - Deep 2\n  - Mid 2\n- Top 2",
+        "Top\n  - Mid\n    - Deep 1\n    - Deep 2\n  - Mid 2\n- Top 2",
+    )
+
+
 # Known limitation: unfenced code after prose continuation gets joined.
 # If current is non-empty (accumulating prose), an indented line is treated
 # as wrapped continuation rather than a code block. Fenced code (```) is
@@ -195,6 +223,7 @@ def run_all():
         test_ascii_table_alone_keeps_shape,
         test_tabs_preserved,
         test_numbered_list_indented_continuation_joins,
+        test_multilevel_lists,
     ]
     for fn in tests:
         fn()
