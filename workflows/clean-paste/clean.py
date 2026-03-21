@@ -131,7 +131,8 @@ def clean(text):
             flush(); result.append("")
             prev_structural = False; code_block_indent = None; continue
         if is_structural(s):
-            flush(); result.append(s)
+            flush()
+            current.append(s)
             structural_indent = len(s) - len(s.lstrip())
             prev_structural = True; code_block_indent = None
         elif is_indented(s):

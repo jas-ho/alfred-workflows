@@ -39,8 +39,7 @@ def test_claude_bullet_and_box_table():
           So Jaime can point Kasey to that single thread as the source of all the names shared in 2024.
         """,
         """
-        Yes - all the emails are part of one thread. They all have subject "Re: Follow-up on Apart Research application" (replies to Kasey's original
-        email).
+        Yes - all the emails are part of one thread. They all have subject "Re: Follow-up on Apart Research application" (replies to Kasey's original email).
 
         The thread you linked contains all the case studies:
         ┌──────────────┬───────┬────────────────────┐
@@ -163,8 +162,7 @@ def test_numbered_list_indented_continuation_joins():
   2. Second point is short.
 """,
         """\
-1. First point starts here
-and continues on the next line with deeper-indented wrap.
+1. First point starts here and continues on the next line with deeper-indented wrap.
 2. Second point is short.""",
     )
     # 4-space list with 7/9-space continuations (Typora-style reformat)
@@ -176,8 +174,7 @@ and continues on the next line with deeper-indented wrap.
          deeper continuation.
     2. Second item.""",
         """\
-1. First item starts here
-continuation line deeper continuation.
+1. First item starts here continuation line deeper continuation.
 2. Second item.""",
     )
 
