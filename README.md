@@ -17,6 +17,16 @@ brew install jq cliclick fzf
 
 ## Workflows
 
+### [App Launcher](dist/App%20Launcher.alfredworkflow)
+
+**Keyword:** `a`
+
+Launch applications using Spotlight (mdfind) instead of Alfred's native file cache. Workaround for when Alfred's filecache doesn't index all apps. Lists all .app bundles from /Applications, /System/Applications, and ~/Applications with client-side filtering, deduplication, and a short-lived cache for instant keystroke response. Focuses already-running apps rather than opening new windows.
+
+**Dependencies:** Python 3
+
+---
+
 ### [Edge Workspace Switcher](dist/Edge%20Workspace%20Switcher.alfredworkflow)
 
 **Keyword:** `ew`
