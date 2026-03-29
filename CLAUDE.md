@@ -17,18 +17,34 @@
 
 ## Adding a New Workflow
 
+**GUI-first** (when designing UI in Alfred):
 1. Create workflow in Alfred Preferences (generates a new UUID dir)
 2. `mkdir workflows/<new-name>` and move contents from Alfred's UUID dir
 3. Extract substantial scripts to standalone files and wire them via `scriptfile`
-4. Set a stable, non-empty `bundleid` in `info.plist`
-5. Import the workflow once in Alfred, then run `./dev-setup.sh` to auto-link it
-6. Run `./build.sh` and update README
+
+**Code-first** (when you already know the plist structure):
+1. `mkdir workflows/<new-name>` and create `info.plist` + scripts
+   (use an existing workflow like `smart-date` as a reference for plist structure)
+2. Run `./build.sh` to create the `.alfredworkflow` zip
+3. `open "dist/<Name>.alfredworkflow"` to import into Alfred
+
+**Both paths then:**
+4. Set a stable `bundleid` in `info.plist` (convention: `com.jason.<name>`)
+5. Run `./dev-setup.sh` to symlink the workflow dir into Alfred
+6. Complete the checklist below
+
+## Completion Checklist
+
+After adding or modifying a workflow:
+- [ ] `uv run pytest` passes
+- [ ] `./build.sh` to update dist/ zips
+- [ ] README.md updated (add entry under `## Workflows` for new workflows)
+- [ ] `codex review --uncommitted` for a second opinion on non-trivial changes
 
 ## Modifying a Workflow
 
 - Scripts (.py/.js/.sh): Edit directly, changes are live
 - Plist config: Edit in Alfred Preferences or with `plutil`
-- After changes: run `./build.sh` to update dist/ zips
 
 ## Script Patterns
 
