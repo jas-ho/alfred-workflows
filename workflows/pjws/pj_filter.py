@@ -39,7 +39,7 @@ def main() -> int:
     if pjws is None:
         _error_item(
             "pjws not installed",
-            "Run `uv pip install -e ~/Code/pjws` then reload Alfred.",
+            "Run `~/Code/pjws/scripts/install.sh` then reload Alfred.",
         )
         return 0
     r = subprocess.run(
