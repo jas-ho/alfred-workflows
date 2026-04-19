@@ -27,6 +27,21 @@ Launch applications using Spotlight (mdfind) instead of Alfred's native file cac
 
 ---
 
+### [pjws](dist/pjws.alfredworkflow)
+
+**Keyword:** `pj`
+
+Front-end for the [pjws](https://github.com/jas-ho/dotfiles/tree/main/.config/pjws) project workspace orchestrator. Discovers every `~/Projects/*/*/README.md` with a `pjws:` frontmatter block, annotates each project with runtime state (slot, per-adapter status, Obsidian singleton owner), and sorts loaded projects to the top.
+
+- `Return` → `pjws switch <name>` (falls back to load when not loaded)
+- `Cmd+Return` → `pjws unload <name>` (only enabled for loaded projects)
+
+Matches on slug, split slug segments, title words, and category — type `gen` to find `enhancing-genomics`.
+
+**Dependencies:** pjws orchestrator at `~/.config/pjws/bin/pjws`, Python 3
+
+---
+
 ### [Edge Workspace Switcher](dist/Edge%20Workspace%20Switcher.alfredworkflow)
 
 **Keyword:** `ew`
