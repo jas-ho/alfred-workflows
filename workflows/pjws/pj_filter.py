@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Alfred Script Filter: delegate to `pjws alfred-items`.
 
-v2 lives at ~/.local/bin/pjws (installed via `uv pip install -e ~/Code/pjws`).
-Alfred's inherited PATH is sparse, so we probe a few common locations and
-fall back to a clear error item rather than silently showing nothing.
+v2 lives at ~/.local/bin/pjws (installed via `~/Code/pjws/scripts/install.sh`,
+which writes a uv-shim there). Alfred's inherited PATH is sparse, so we probe
+a few common locations and fall back to a clear error item rather than
+silently showing nothing.
 """
 from __future__ import annotations
 
