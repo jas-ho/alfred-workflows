@@ -147,6 +147,23 @@ chmod +x ~/bin/multiclip.py ~/bin/multiclip-wrapper.sh
 
 ---
 
+### [Run Command](dist/Run%20Command.alfredworkflow)
+
+**Keyword:** `run` (or `>`)
+
+Run a one-off shell command from Alfred without opening a Terminal window. Useful for quick commands where you want the result on your clipboard (e.g. `run date`, `run git -C ~/Code/foo rev-parse HEAD`, `run brew outdated`).
+
+- Headless `zsh -i -l` (so `[[ -o interactive ]] || return` guards in your `.zshrc` still fire and `ZDOTDIR` is respected). Init-time stderr is discarded to hide the "can't change option: zle" noise that shows up when `-i` runs without a tty; the command's own stderr is still captured via a separate file descriptor.
+- Aliases, functions, and PATH from your dotfiles are available.
+- Working directory is `$HOME`, so `run ls Desktop` works.
+- stdout is copied to the clipboard; a notification shows exit status and a truncated preview (newlines collapsed, 240-char cap).
+
+**Conflict with Alfred's built-in:** if Alfred's "Terminal command" feature is enabled with prefix `>`, disable it in Alfred Preferences → Features → Terminal/Shell so this workflow's `>` keyword wins.
+
+**Permissions:** grant Alfred.app Full Disk Access (and any other TCC permissions) in System Settings → Privacy & Security if your commands touch protected paths.
+
+---
+
 ### [Multi Send](dist/Multi%20Send.alfredworkflow)
 
 **Keyword:** `ms` or `Multi Send`

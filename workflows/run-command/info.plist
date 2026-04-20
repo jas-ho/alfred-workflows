@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>bundleid</key>
+	<string>com.jason.alfred.run-command</string>
+	<key>category</key>
+	<string>Tools</string>
+	<key>connections</key>
+	<dict>
+		<key>8F65C5BB-9A80-4028-B49B-9D2CF652793D</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>06BBFD39-DF80-480C-96DB-6B457966969D</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>87968BC9-AAB4-43D1-A5E4-00023F738AB5</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>06BBFD39-DF80-480C-96DB-6B457966969D</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>06BBFD39-DF80-480C-96DB-6B457966969D</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>83FA98D8-E9F1-4123-AE6A-4EA38A84ED2E</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+	</dict>
+	<key>createdby</key>
+	<string>Jason Hoelscher-Obermaier</string>
+	<key>description</key>
+	<string>Run an ad-hoc shell command from Alfred (headless zsh -i -l, with init-time noise suppressed). Stdout is copied to the clipboard; a notification shows exit status and truncated output.</string>
+	<key>disabled</key>
+	<false/>
+	<key>name</key>
+	<string>Run Command</string>
+	<key>objects</key>
+	<array>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>argumenttype</key>
+				<integer>0</integer>
+				<key>keyword</key>
+				<string>run</string>
+				<key>subtext</key>
+				<string>Run shell command (zsh -i -l); stdout → clipboard</string>
+				<key>text</key>
+				<string>Run Command</string>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.keyword</string>
+			<key>uid</key>
+			<string>8F65C5BB-9A80-4028-B49B-9D2CF652793D</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>argumenttype</key>
+				<integer>0</integer>
+				<key>keyword</key>
+				<string>&gt;</string>
+				<key>subtext</key>
+				<string>Run shell command (zsh -i -l); stdout → clipboard</string>
+				<key>text</key>
+				<string>Run Command</string>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.keyword</string>
+			<key>uid</key>
+			<string>87968BC9-AAB4-43D1-A5E4-00023F738AB5</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>0</integer>
+				<key>script</key>
+				<string></string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string>./run.sh</string>
+				<key>type</key>
+				<integer>8</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>06BBFD39-DF80-480C-96DB-6B457966969D</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>lastpathcomponent</key>
+				<false/>
+				<key>onlyshowifquerypopulated</key>
+				<false/>
+				<key>text</key>
+				<string>{query}</string>
+				<key>title</key>
+				<string>Run Command</string>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.output.notification</string>
+			<key>uid</key>
+			<string>83FA98D8-E9F1-4123-AE6A-4EA38A84ED2E</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
+	</array>
+	<key>readme</key>
+	<string>Run an ad-hoc shell command from Alfred without opening a Terminal window.
+
+Keywords: `run &lt;cmd&gt;` (or `&gt; &lt;cmd&gt;`)
+
+Commands run via a headless `zsh -i -l`, so `[[ -o interactive ]] || return` guards in your .zshrc still fire and `ZDOTDIR` is respected. Init-time stderr is silenced (to hide the "can't change option: zle" noise that tty-less `-i` triggers from many setups); the command's own stderr is still captured via a separate fd. Aliases, functions, and PATH from your dotfiles are all available. Working directory is $HOME, so relative paths like `Desktop/foo.txt` work as expected.
+
+After running:
+- stdout is copied to the clipboard (if non-empty)
+- a macOS notification shows the exit status and a truncated preview
+
+Notes:
+- If the `&gt;` keyword collides with Alfred's built-in "Terminal command" feature, disable it in Alfred Preferences → Features → Terminal/Shell.
+- Alfred.app may need Full Disk Access or other TCC permissions if your commands touch protected paths.
+- GUI-launched shells don't inherit tmux/terminal session env. Stuff set only in `.zshenv` on the currently focused terminal is fine (.zshenv always loads), but tmux-specific vars won't be present.</string>
+	<key>uidata</key>
+	<dict>
+		<key>8F65C5BB-9A80-4028-B49B-9D2CF652793D</key>
+		<dict>
+			<key>xpos</key>
+			<real>40</real>
+			<key>ypos</key>
+			<real>40</real>
+		</dict>
+		<key>87968BC9-AAB4-43D1-A5E4-00023F738AB5</key>
+		<dict>
+			<key>xpos</key>
+			<real>40</real>
+			<key>ypos</key>
+			<real>140</real>
+		</dict>
+		<key>06BBFD39-DF80-480C-96DB-6B457966969D</key>
+		<dict>
+			<key>xpos</key>
+			<real>240</real>
+			<key>ypos</key>
+			<real>90</real>
+		</dict>
+		<key>83FA98D8-E9F1-4123-AE6A-4EA38A84ED2E</key>
+		<dict>
+			<key>xpos</key>
+			<real>440</real>
+			<key>ypos</key>
+			<real>90</real>
+		</dict>
+	</dict>
+	<key>userconfigurationconfig</key>
+	<array/>
+	<key>variablesdontexport</key>
+	<array/>
+	<key>version</key>
+	<string>0.1.0</string>
+	<key>webaddress</key>
+	<string></string>
+</dict>
+</plist>
