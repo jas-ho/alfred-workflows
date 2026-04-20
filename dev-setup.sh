@@ -5,6 +5,10 @@ set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 ALFRED_WORKFLOWS="$HOME/Library/Application Support/Alfred/Alfred.alfredpreferences/workflows"
+# Backups live OUTSIDE Alfred's workflows dir so Alfred doesn't scan them and
+# create ghost duplicates in the workflow list. (.gitignored.)
+BACKUP_DIR="$REPO_DIR/.backups"
+STAMP="$(date +%Y%m%d%H%M%S)"
 
 if [ ! -d "$ALFRED_WORKFLOWS" ]; then
     echo "Error: Alfred workflows directory not found at:"
@@ -12,6 +16,33 @@ if [ ! -d "$ALFRED_WORKFLOWS" ]; then
     echo "Is Alfred installed?"
     exit 1
 fi
+
+# Sweep any existing *.bak.* entries Alfred is scanning (usually residue from
+# older dev-setup runs that placed backups next to the live target). Stale
+# symlinks are removed; real directories are moved into $BACKUP_DIR.
+sweep_stale_baks() {
+    local entry base
+    local moved=0
+    # (N) = zsh null-glob qualifier: no error when there are no matches.
+    for entry in "$ALFRED_WORKFLOWS"/*.bak.*(N); do
+        [ -e "$entry" ] || continue
+        base="$(basename "$entry")"
+        if [ -L "$entry" ]; then
+            rm "$entry"
+            echo "  CLEAN  $base (stale symlink removed)"
+        elif [ -d "$entry" ]; then
+            mkdir -p "$BACKUP_DIR"
+            mv "$entry" "$BACKUP_DIR/$base"
+            echo "  CLEAN  $base -> .backups/"
+            moved=1
+        fi
+    done
+    if (( moved )); then
+        echo ""
+    fi
+}
+
+sweep_stale_baks
 
 plist_raw() {
     local plist="$1"
@@ -32,6 +63,12 @@ find_installed_target() {
 
     for target in "$ALFRED_WORKFLOWS"/user.workflow.*; do
         [ -e "$target" ] || continue
+        # Skip stale backup entries so they can't be picked as the live target
+        # (the old behavior would symlink-over them, leaving `.bak.*`-named
+        # "active" workflows behind and cascading on each re-run).
+        case "$(basename "$target")" in
+            *.bak.*) continue ;;
+        esac
         target_info="$target/info.plist"
         [ -f "$target_info" ] || continue
 
@@ -93,8 +130,9 @@ for source in "$REPO_DIR"/workflows/*/; do
     fi
 
     if [ -d "$target" ]; then
-        backup="${target}.bak.$(date +%Y%m%d%H%M%S)"
-        echo "  LINK  $name (backing up existing to $(basename "$backup"))"
+        mkdir -p "$BACKUP_DIR"
+        backup="$BACKUP_DIR/$(basename "$target").bak.$STAMP"
+        echo "  LINK  $name (backing up existing to .backups/$(basename "$backup"))"
         mv "$target" "$backup"
     else
         echo "  SKIP  $name (target path missing: $(basename "$target"))"
