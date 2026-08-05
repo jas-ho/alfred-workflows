@@ -27,6 +27,16 @@ Launch applications using Spotlight (mdfind) instead of Alfred's native file cac
 
 ---
 
+### [Open New Window](dist/Open%20New%20Window.alfredworkflow)
+
+**Keyword:** `newwin`
+
+Opens a new window of the chosen app on the current Space without switching Spaces. Creates the window via the app's own new-window menu item while the app is in the background, then focuses it. Falls back to Cmd+N with a notification for apps without a discoverable new-window menu item.
+
+**Dependencies:** Python 3, Accessibility permission for Alfred
+
+---
+
 ### [pjws](dist/pjws.alfredworkflow)
 
 **Keyword:** `pj`
@@ -62,6 +72,7 @@ Track status in [Issue #4](https://github.com/jas-ho/alfred-workflows/issues/4).
 Convert natural language dates/times to Discord timestamp formats. Type something like "tomorrow 4pm" or "next Friday" and get all Discord timestamp variants.
 
 **Formats generated:**
+
 - Relative time (`<t:...:R>`)
 - Long/short date and time
 - Long/short date
@@ -110,6 +121,7 @@ Control Moom window management actions from Alfred. Lists all available Moom act
 Parse natural language dates and times into multiple output formats. Type something like "next tuesday", "in three months", or "tomorrow 3pm" and pick the format you need. Auto-detects whether a time component was specified and adjusts the output formats accordingly.
 
 **Date-only formats** (e.g., `sd next tuesday`):
+
 - ISO date (`2026-03-10`)
 - European date (`10.03.2026`)
 - English (`Tuesday, March 10, 2026`)
@@ -117,6 +129,7 @@ Parse natural language dates and times into multiple output formats. Type someth
 - Unix timestamp
 
 **DateTime formats** (e.g., `sd tomorrow 3pm`):
+
 - ISO datetime (`2026-03-10_15-00`)
 - European datetime (`10.03.2026 15:00`)
 - English (`Tuesday, March 10, 2026, 3:00 PM`)
@@ -134,6 +147,7 @@ Parse natural language dates and times into multiple output formats. Type someth
 Select multiple items from Alfred's clipboard history and paste them as a formatted list. Opens a Terminal window with fzf for multi-selection (TAB to select, Ctrl-A for all, Enter to confirm), then lets you choose output format: dash list, numbered list, bullet points, comma-separated, or plain newlines. Result is auto-pasted to the original app.
 
 **Setup:** The helper scripts need to be available in `~/bin/`:
+
 ```bash
 # For development (symlinks, auto-updates):
 ./dev-setup.sh
@@ -171,6 +185,7 @@ Run a one-off shell command from Alfred without opening a Terminal window. Usefu
 Send clipboard list items as separate messages. Parses the clipboard content based on format (dash list, numbered, bullets, comma-separated, or plain newlines), then sends each item as an individual message to the frontmost app with Cmd+V and Enter. Includes focus-change detection to abort if you switch apps mid-send.
 
 **Setup:** The helper script needs to be available in `~/bin/`:
+
 ```bash
 # For development (symlink, auto-updates):
 ./dev-setup.sh
@@ -211,6 +226,7 @@ uv run pytest
 ```
 
 Test conventions:
+
 - Put tests in `tests/*_test.py` (pytest-discovered).
 - Prefer parametrized tests for input/output matrices.
 - Keep workflow logic in small pure helpers where possible to make testing easy.
