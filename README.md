@@ -29,7 +29,7 @@ Launch applications using Spotlight (mdfind) instead of Alfred's native file cac
 
 ### [Open New Window](dist/Open%20New%20Window.alfredworkflow)
 
-**Keyword:** `newwin`
+**Keyword:** `newwin` or `nw`
 
 Opens a new window of the chosen app on the current Space without switching Spaces. Creates the window via the app's own new-window menu item while the app is in the background, then focuses it. Falls back to Cmd+N with a notification for apps without a discoverable new-window menu item.
 
