@@ -86,7 +86,7 @@ Convert natural language dates/times to Discord timestamp formats. Type somethin
 
 **Keyword:** `clean paste` or `cp`
 
-Remove line breaks and normalize whitespace from clipboard content, then paste. Useful for cleaning up text copied from PDFs or formatted sources. Main use case for me as of early 2026: Cleaning up terminal output of coding agents.
+Remove line breaks and normalize whitespace from clipboard content, then paste. Useful for cleaning up text copied from PDFs or formatted sources. Main use case for me as of early 2026: Cleaning up terminal output of coding agents. Also strips blockquote markers (`>` or the rendered `│` bar) from drafts Claude wraps in quotes, unwrapping the wrapped lines while preserving paragraph breaks and short intentional breaks like signatures.
 
 **Dependencies:** Python 3
 

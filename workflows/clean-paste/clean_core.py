@@ -6,13 +6,13 @@ _BULLETS = "-*+•◦▪▸→▶►➤·⏺"
 _WHITESPACE = " \t\u00a0"
 # Dedent should treat tabs as semantic indentation and leave them untouched.
 _SPACES_ONLY = " \u00a0"
-_BOX = "┌┬┐└┴┘│─"
+_BOX = "┌┬┐└┴┘├┼┤│─┏┳┓┗┻┛┣╋┫┃━╔╦╗╚╩╝╠╬╣║═"
+
+_QUOTE_MARKERS = ">│┃▏▎▍▌"
 
 _FENCE = re.compile(r"^[ \t]*(`{3,}|~{3,})")
 _HEADING = re.compile(r"^[ \t]{0,3}#{1,6}[ \t]+\S")
-_HRULE = re.compile(
-    r"^[ \t]{0,3}(?:(?:-[ \t]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})$"
-)
+_HRULE = re.compile(r"^[ \t]{0,3}(?:(?:-[ \t]*){3,}|(?:_[ \t]*){3,}|(?:\*[ \t]*){3,})$")
 _BLOCKQUOTE = re.compile(r"^[ \t]{0,3}>")
 _UNORDERED = re.compile(rf"^([ \t]*)([{re.escape(_BULLETS)}])[ \t]+(.*)$")
 _ORDERED = re.compile(r"^([ \t]*)(\d{1,3}[.)])[ \t]+(.*)$")
@@ -24,6 +24,7 @@ _CODE_START = re.compile(
     r"^(?:def\b|class\b|return\b|if\b|elif\b|else:|for\b|while\b|try:|except\b|with\b|from\b|import\b|const\b|let\b|var\b|function\b)"
 )
 _CODE_ASSIGN = re.compile(r"^[A-Za-z_][\w.\[\]]*\s*[:+\-*/%]?=\s*\S")
+_QUOTE_MARKER = re.compile(rf"^[ \t]{{0,3}}[{re.escape(_QUOTE_MARKERS)}][ \t]?")
 
 
 def _leading_indent(line):
@@ -142,9 +143,8 @@ def _is_markdown_table_line(lines, idx):
         return True
     prev_line = _prev_nonblank(lines, idx)
     next_line = _next_nonblank(lines, idx)
-    return (
-        (prev_line is not None and _is_markdown_separator_row(prev_line))
-        or (next_line is not None and _is_markdown_separator_row(next_line))
+    return (prev_line is not None and _is_markdown_separator_row(prev_line)) or (
+        next_line is not None and _is_markdown_separator_row(next_line)
     )
 
 
@@ -216,12 +216,17 @@ def _strip_single_wrapper_marker(lines):
     if min_indent <= base_indent:
         return lines
 
-    if any(_is_list_line(line) and _leading_indent(line) <= base_indent for line in followers):
+    if any(
+        _is_list_line(line) and _leading_indent(line) <= base_indent
+        for line in followers
+    ):
         return lines
 
     saw_blank = any(not line.strip() for line in lines[first_idx + 1 :])
     indented_children = [
-        line for line in lines[first_idx + 1 :] if line.strip() and _leading_indent(line) > base_indent
+        line
+        for line in lines[first_idx + 1 :]
+        if line.strip() and _leading_indent(line) > base_indent
     ]
     indented_structural = any(
         _is_list_line(line)
@@ -241,6 +246,102 @@ def _strip_single_wrapper_marker(lines):
     for i in range(first_idx + 1, len(out)):
         if out[i].strip():
             out[i] = _remove_indent(out[i], shift)
+    return out
+
+
+def _is_quote_line(line):
+    m = _QUOTE_MARKER.match(line)
+    if not m:
+        return False
+    if m.group(0).strip() == ">":
+        return True
+    # A leading box-drawing bar is a quote marker only when the line is not a
+    # table row (those carry 2+ box characters).
+    return not _is_box_line(line)
+
+
+def _is_quote_structural(line):
+    return (
+        _is_heading(line)
+        or _is_hrule(line)
+        or _is_fence(line)
+        or _is_table_line(line)
+        or _is_list_line(line)
+    )
+
+
+def _reflow_quote(lines):
+    """Strip quote markers and unwrap wrapped lines inside the quote.
+
+    Blank lines are kept, and a break after a line clearly shorter than the
+    block's wrap width is treated as intentional (signatures, greetings).
+    """
+    stripped = []
+    in_fence = False
+    for line in lines:
+        s = line.rstrip()
+        if _is_quote_line(s):
+            s = s[_QUOTE_MARKER.match(s).end() :]
+        # Inside fenced code, further ">"/bars are literal content.
+        if not in_fence:
+            while _is_quote_line(s):
+                s = s[_QUOTE_MARKER.match(s).end() :]
+        s = s.rstrip()
+        if _is_fence(s):
+            in_fence = not in_fence
+        stripped.append(s)
+    stripped = _common_dedent(stripped)
+
+    out = []
+    para = []
+
+    def flush_para():
+        # Reflow one paragraph run; the wrap width is inferred per paragraph
+        # so a single long line (URL, unwrapped copy) elsewhere in the quote
+        # cannot inflate the join threshold.
+        if not para:
+            return
+        pmax = max(len(p) for p in para)
+        threshold = max(40, int(pmax * 0.7))
+        cur = para[0]
+        prev_len = len(cur)
+        for p in para[1:]:
+            if prev_len >= threshold:
+                cur += " " + p.strip()
+            else:
+                out.append(cur)
+                cur = p
+            prev_len = len(p)
+        out.append(cur)
+        para.clear()
+
+    in_fence = False
+    for s in stripped:
+        if in_fence:
+            out.append(s)
+            if _is_fence(s):
+                in_fence = False
+            continue
+        if _is_fence(s):
+            flush_para()
+            out.append(s)
+            in_fence = True
+            continue
+        if not s.strip():
+            flush_para()
+            out.append("")
+            continue
+        if _is_list_line(s):
+            # Starts its own run so a wrapped continuation can join into it.
+            flush_para()
+            para.append(s)
+            continue
+        if _is_quote_structural(s):
+            flush_para()
+            out.append(s)
+            continue
+        para.append(s)
+    flush_para()
     return out
 
 
@@ -310,10 +411,19 @@ def clean(text):
             i += 1
             continue
 
+        if _is_quote_line(line):
+            flush_paragraph()
+            flush_list()
+            j = i
+            while j < len(lines) and _is_quote_line(lines[j].rstrip()):
+                j += 1
+            result.extend(_reflow_quote([ln.rstrip() for ln in lines[i:j]]))
+            i = j
+            continue
+
         if (
             _is_heading(line)
             or _is_hrule(line)
-            or _is_blockquote(line)
             or _is_table_line(line)
             or _is_markdown_table_line(lines, i)
         ):

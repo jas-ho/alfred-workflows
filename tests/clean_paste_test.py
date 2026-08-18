@@ -22,13 +22,17 @@ clean = load_clean()
 def expect_equal(name, text, expected):
     got = clean(dedent(text))
     want = dedent(expected).strip("\n")
-    assert got == want, f"{name} failed:\n--- got ---\n{got!r}\n--- expected ---\n{want!r}"
+    assert (
+        got == want
+    ), f"{name} failed:\n--- got ---\n{got!r}\n--- expected ---\n{want!r}"
 
 
 def expect_equal_raw(name, text, expected):
     got = clean(text)
     want = expected.strip("\n")
-    assert got == want, f"{name} failed:\n--- got ---\n{got!r}\n--- expected ---\n{want!r}"
+    assert (
+        got == want
+    ), f"{name} failed:\n--- got ---\n{got!r}\n--- expected ---\n{want!r}"
 
 
 def test_wrapper_marker_strips_single_container():
@@ -175,7 +179,7 @@ def test_markdown_structures_do_not_merge():
     expect_equal(
         "blockquote boundary",
         "> quote\ncontinued",
-        "> quote\ncontinued",
+        "quote\ncontinued",
     )
     expect_equal(
         "hrule boundary",
@@ -250,6 +254,155 @@ def test_four_digit_ordered_list_context():
         "2026. was weird\ncontinued\n",
         "2026. was weird continued",
     )
+
+
+def test_markdown_blockquote_draft_strips_markers_keeps_breaks():
+    # Claude Code wraps drafts (emails etc.) in markdown blockquotes.
+    text = "\n".join(
+        [
+            "Hier der Draft:",
+            "",
+            "> Dear AI Office Secretariat,",
+            ">",
+            "> I am transitioning out of my role at Apart Research and would like to transfer my seat in the Expert Forum on Frontier AI to my successor.",
+            ">",
+            "> Kind regards,",
+            "> Jason",
+            "",
+            "Soll ich ihn als Gmail-Draft anlegen?",
+        ]
+    )
+    expected = "\n".join(
+        [
+            "Hier der Draft:",
+            "",
+            "Dear AI Office Secretariat,",
+            "",
+            "I am transitioning out of my role at Apart Research and would like to transfer my seat in the Expert Forum on Frontier AI to my successor.",
+            "",
+            "Kind regards,",
+            "Jason",
+            "",
+            "Soll ich ihn als Gmail-Draft anlegen?",
+        ]
+    )
+    expect_equal_raw("markdown blockquote draft", text, expected)
+
+
+def test_terminal_blockquote_copy_unwraps_and_keeps_signature():
+    # Copying the rendered blockquote from the terminal yields a bar glyph
+    # per wrapped line; wraps should join, paragraph breaks and short
+    # intentional breaks (signature) should survive.
+    text = "\n".join(
+        [
+            "│ Please direct all future Forum communications and invitations for Apart",
+            "│ to him.",
+            "│",
+            "│ Separately, I would like to remain part of the Expert Forum in a",
+            "│ personal capacity if possible: I will continue to work on frontier AI",
+            "│ evaluations and would be glad to keep contributing, whether through the",
+            "│ Forum meetings, written input, or targeted workshops.",
+            "│",
+            "│ Kind regards,",
+            "│ Jason",
+        ]
+    )
+    expected = "\n".join(
+        [
+            "Please direct all future Forum communications and invitations for Apart to him.",
+            "",
+            "Separately, I would like to remain part of the Expert Forum in a personal capacity if possible: I will continue to work on frontier AI evaluations and would be glad to keep contributing, whether through the Forum meetings, written input, or targeted workshops.",
+            "",
+            "Kind regards,",
+            "Jason",
+        ]
+    )
+    expect_equal_raw("terminal blockquote copy", text, expected)
+
+
+def test_quote_bar_does_not_eat_box_tables():
+    expect_equal_raw(
+        "box table not treated as quote",
+        "│     Date     │ From  │\n",
+        "│     Date     │ From  │",
+    )
+
+
+def test_quoted_list_lines_not_joined():
+    expect_equal_raw(
+        "quoted list",
+        "> - one\n> - two\n",
+        "- one\n- two",
+    )
+
+
+def test_quoted_list_continuation_joins():
+    expect_equal_raw(
+        "quoted list continuation",
+        "> - This is a long list item which is wrapped at a standard terminal width\n"
+        ">   onto another line that belongs to the same item.\n"
+        "> - second\n",
+        "- This is a long list item which is wrapped at a standard terminal width onto another line that belongs to the same item.\n"
+        "- second",
+    )
+
+
+def test_quoted_fenced_code_preserved():
+    expect_equal_raw(
+        "quoted fence",
+        "> ```python\n"
+        '> first = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"\n'
+        '> second = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"\n'
+        "> ```\n",
+        "```python\n"
+        'first = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"\n'
+        'second = "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"\n'
+        "```",
+    )
+
+
+def test_quoted_fence_keeps_literal_quote_chars():
+    expect_equal_raw(
+        "quoted fence with literal >",
+        "> ```sh\n> sort input.txt > output.txt\n> ```\n",
+        "```sh\nsort input.txt > output.txt\n```",
+    )
+
+
+def test_quoted_table_row_loses_quote_marker_keeps_table():
+    expect_equal_raw(
+        "quoted table row",
+        "> │ A │ B │\n",
+        "│ A │ B │",
+    )
+
+
+def test_heavy_box_table_not_treated_as_quote():
+    expect_equal_raw(
+        "heavy box table",
+        "┃ A ┃ B ┃\n",
+        "┃ A ┃ B ┃",
+    )
+
+
+def test_long_outlier_line_does_not_block_reflow():
+    text = "\n".join(
+        [
+            "> See https://example.com/some/extremely/long/link/that/never/wraps/because/urls/are/one/token/and/keep/going/forever/in/one/line",
+            ">",
+            "> This wrapped paragraph should still be joined back together even",
+            "> though the quote contains one much longer unbroken line above,",
+            "> because the wrap width is inferred per paragraph.",
+        ]
+    )
+    expected = "\n".join(
+        [
+            "See https://example.com/some/extremely/long/link/that/never/wraps/because/urls/are/one/token/and/keep/going/forever/in/one/line",
+            "",
+            "This wrapped paragraph should still be joined back together even though the quote contains one much longer unbroken line above, because the wrap width is inferred per paragraph.",
+        ]
+    )
+    expect_equal_raw("outlier line", text, expected)
 
 
 def test_markdown_table_without_outer_pipes():

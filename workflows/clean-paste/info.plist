@@ -144,7 +144,7 @@
 		</dict>
 	</array>
 	<key>readme</key>
-	<string>Remove line breaks and whitespace in a smart way (removing uniform indentation, unwrapping lines that are likely wrapped from limited width outputs), then paste</string>
+	<string>Remove line breaks and whitespace in a smart way (removing uniform indentation, stripping blockquote markers, unwrapping lines that are likely wrapped from limited width outputs), then paste</string>
 	<key>uidata</key>
 	<dict>
 		<key>19E10149-93FB-4DED-B7C2-A1A148FB42C1</key>
@@ -181,7 +181,7 @@
 	<key>variablesdontexport</key>
 	<array/>
 	<key>version</key>
-	<string>0.3.0</string>
+	<string>0.4.0</string>
 	<key>webaddress</key>
 	<string></string>
 </dict>
