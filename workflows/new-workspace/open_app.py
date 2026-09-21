@@ -5,11 +5,19 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shlex
 import shutil
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
+
+
+class WindowOpenError(RuntimeError):
+    def __init__(self, message: str, session: str):
+        super().__init__(message)
+        self.session = session
 
 
 def run(argv: list[str], timeout: int = 30) -> str:
@@ -93,32 +101,52 @@ def open_app(request: dict, spec: dict) -> dict:
         tmux = shutil.which("tmux")
         if not tmux:
             raise RuntimeError("tmux is not installed")
-        session = request.get("tmux_session") or "ws-" + request["id"][:12]
-        if not request.get("tmux_session"):
-            run(
-                [
-                    tmux,
-                    "new-session",
-                    "-d",
-                    "-s",
-                    session,
-                    "-c",
-                    request["directory"],
-                    "-e",
-                    "PATH=" + os.environ["PATH"],
-                ]
+        session = request.get("tmux_session") or ""
+        if not session:
+            slug = re.sub(
+                r"[^\w-]+",
+                "-",
+                unicodedata.normalize("NFKC", request["name"]).lower(),
             )
+            base = "ws-" + (slug.strip("-_")[:60] or "workspace")
+            for number in range(1, 101):
+                session = base if number == 1 else f"{base}-{number}"
+                try:
+                    run(
+                        [
+                            tmux,
+                            "new-session",
+                            "-d",
+                            "-s",
+                            session,
+                            "-c",
+                            request["directory"],
+                            "-e",
+                            "PATH=" + os.environ["PATH"],
+                        ]
+                    )
+                    break
+                except RuntimeError as error:
+                    # new-session is atomic. Only a name collision is retried;
+                    # never attach an existing session or repeat an uncertain launch.
+                    if str(error).strip() != "duplicate session: " + session:
+                        raise
+            else:
+                raise RuntimeError("Too many tmux sessions named " + base)
         # No send-keys, switch-client, or detach-other-clients: only the new window attaches.
         command = shlex.join([tmux, "attach-session", "-t", "=" + session])
-        native_id = run(
-            [
-                "/usr/bin/osascript",
-                "-e",
-                ghostty_script(),
-                request["directory"],
-                command,
-            ]
-        )
+        try:
+            native_id = run(
+                [
+                    "/usr/bin/osascript",
+                    "-e",
+                    ghostty_script(),
+                    request["directory"],
+                    command,
+                ]
+            )
+        except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+            raise WindowOpenError(str(error), session) from error
         return {"native_id": native_id, "tmux_session": session}
     if kind == "chromium":
         native_id = run(
@@ -168,5 +196,7 @@ if __name__ == "__main__":
         )
         print(json.dumps(result))
     except (OSError, ValueError, RuntimeError, subprocess.SubprocessError) as error:
+        if isinstance(error, WindowOpenError):
+            print(json.dumps({"tmux_session": error.session}))
         print(str(error), file=sys.stderr)
         sys.exit(1)

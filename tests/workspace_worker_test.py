@@ -49,7 +49,11 @@ hs={
  geometry={rect=function(x,y,w,h)return {x=x,y=y,w=w,h=h}end},
  spaces={focusedSpace=function()return focused end,spaceDisplay=function()return 'display' end,
   spaceType=function()return 'user'end,allSpaces=function()return {display=spaces}end,
-  addSpaceToScreen=function()spaces={1,2,3};return true end,
+  addSpaceToScreen=function()
+   if switchDuring=='create' then later(.2,function() spaces={1,2,3};focused=2 end)
+   else spaces={1,2,3} end
+   return true
+  end,
   closeMissionControl=function()end,
   gotoSpace=function(s)
    if enterFailsOnce and s==3 then enterFailsOnce=false;return nil,'child is nil' end
@@ -66,13 +70,16 @@ hs={
    if hangOpen and args[2]=='open' then return self end
    later(.01,function()
     self.running=false
+    if switchDuring==args[2] then focused=2 end
     if args[2]=='preflight' and preflightFails then cb(1,'','prerequisite missing');return end
     if args[2]=='rename' and renameFails then cb(1,'','naming failed');return end
     if args[2]=='open' then
      local idx=tonumber(args[4])+1;local spec=args[3].apps[idx]
+     if ghosttyFails then cb(1,{tmux_session='ws-research'},'window failed');return end
      if failSecond and idx==2 then cb(1,'','second app failed');return end
      add(100+idx,spec.bundle,wrongSpace and 1 or focused)
      if ambiguous then add(900,spec.bundle,focused)end
+     if switchAfterWindow then focused=2 end
      cb(0,'{}','');return
     end
     cb(0,'{}','')
@@ -192,3 +199,44 @@ def test_startup_request_is_never_replayed_on_another_filesystem_event():
     module.start("root", "state")
     lua.globals().receive()
     assert lua.globals().files["state/" + "a" * 32 + ".json"] is None
+
+
+@pytest.mark.parametrize("stage", ["preflight", "create", "rename"])
+@pytest.mark.parametrize("stay", [False, True])
+def test_manual_switch_before_opening_preserves_user_desktop(stage, stay):
+    lua, worker = runtime()
+    lua.globals().switchDuring = stage
+    result = lua.globals().request(stay)
+    assert result["status"] != "complete"
+    assert result["return_skipped"] == "desktop_changed"
+    assert lua.globals().focused == 2
+    assert not worker.busy
+    assert not [args for args in lua.globals().jobs.values() if args[2] == "open"]
+    if stage == "preflight":
+        assert len(lua.globals().spaces) == 2
+    if stage == "create":
+        assert result["space_id"] == 3
+        assert not [args for args in lua.globals().jobs.values() if args[2] == "rename"]
+
+
+@pytest.mark.parametrize("stay", [False, True])
+def test_manual_switch_after_window_keeps_progress_and_does_not_open_next(stay):
+    lua, worker = runtime()
+    lua.globals().switchAfterWindow = True
+    result = lua.globals().request(stay)
+    assert result["status"] == "partial"
+    assert result["focus_changed"]
+    assert result["return_skipped"] == "desktop_changed"
+    assert lua.globals().focused == 2
+    assert len(result["windows"]) == 1
+    assert len([args for args in lua.globals().jobs.values() if args[2] == "open"]) == 1
+    assert not worker.busy
+
+
+def test_partial_helper_metadata_records_kept_tmux_session():
+    lua, _ = runtime()
+    lua.globals().ghosttyFails = True
+    result = lua.globals().request(False)
+    assert result["status"] == "partial"
+    assert result["tmux_session"] == "ws-research"
+    assert len(result["windows"]) == 0

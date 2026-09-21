@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import plistlib
+import shlex
 import subprocess
 from pathlib import Path
 
@@ -121,20 +122,24 @@ def test_new_tmux_session_gets_directory_and_explicit_path(monkeypatch):
     monkeypatch.setattr(opener.shutil, "which", lambda _: "/opt/homebrew/bin/tmux")
     monkeypatch.setattr(opener, "run", lambda argv: calls.append(argv) or "window-id")
     monkeypatch.setenv("PATH", "/opt/homebrew/bin:/usr/bin")
-    request = {"directory": '/tmp/with "quotes"', "id": "b" * 32}
+    request = {
+        "directory": '/tmp/with "quotes"',
+        "id": "b" * 32,
+        "name": "Research Notes",
+    }
     result = opener.open_app(request, {"opener": "ghostty"})
     assert calls[0] == [
         "/opt/homebrew/bin/tmux",
         "new-session",
         "-d",
         "-s",
-        "ws-" + "b" * 12,
+        "ws-research-notes",
         "-c",
         request["directory"],
         "-e",
         "PATH=/opt/homebrew/bin:/usr/bin",
     ]
-    assert result["tmux_session"] == "ws-" + "b" * 12
+    assert result["tmux_session"] == "ws-research-notes"
 
 
 def test_blank_obsidian_uses_new_leaf_without_creating_a_note(monkeypatch):
@@ -179,3 +184,90 @@ def test_transport_expiry_leaves_no_replayable_request(tmp_path, monkeypatch):
     with pytest.raises(RuntimeError, match="expired"):
         ws.send({"operation": "check"})
     assert json.loads((tmp_path / "request.json").read_text())["expires"] < ticks[0]
+
+
+@pytest.mark.parametrize(
+    "name,session",
+    [
+        ("Research Notes", "ws-research-notes"),
+        ("Budget: Q4.2026", "ws-budget-q4-2026"),
+        ("!!!", "ws-workspace"),
+        ("Grüße", "ws-grüße"),
+    ],
+)
+def test_readable_tmux_name_and_collision_suffix(monkeypatch, name, session):
+    calls = []
+
+    def run(argv):
+        calls.append(argv)
+        if "new-session" in argv and argv[4] in (session, session + "-2"):
+            raise RuntimeError("duplicate session: " + argv[4])
+        return "native-window"
+
+    monkeypatch.setattr(opener.shutil, "which", lambda _: "/tmux")
+    monkeypatch.setattr(opener, "run", run)
+    result = opener.open_app({"directory": "/tmp", "name": name}, {"opener": "ghostty"})
+    assert result["tmux_session"] == session + "-3"
+    assert len(calls) == 4
+    assert shlex.split(calls[-1][-1])[-1] == "=" + session + "-3"
+
+
+def test_tmux_creation_errors_are_not_retried(monkeypatch):
+    calls = []
+
+    def run(argv):
+        calls.append(argv)
+        raise RuntimeError("permission denied")
+
+    monkeypatch.setattr(opener.shutil, "which", lambda _: "/tmux")
+    monkeypatch.setattr(opener, "run", run)
+    with pytest.raises(RuntimeError, match="permission denied"):
+        opener.open_app({"directory": "/tmp", "name": "Test"}, {"opener": "ghostty"})
+    assert len(calls) == 1
+
+
+def test_ghostty_failure_preserves_created_tmux_identity(monkeypatch):
+    def run(argv):
+        if "new-session" in argv:
+            return ""
+        raise RuntimeError("Automation permission denied")
+
+    monkeypatch.setattr(opener.shutil, "which", lambda _: "/tmux")
+    monkeypatch.setattr(opener, "run", run)
+    with pytest.raises(opener.WindowOpenError) as caught:
+        opener.open_app({"directory": "/tmp", "name": "Test"}, {"opener": "ghostty"})
+    assert caught.value.session == "ws-test"
+
+
+@pytest.mark.parametrize("command", ["create", "alfred-action"])
+def test_partial_creation_message_explains_kept_work_and_next_step(
+    monkeypatch, capsys, command
+):
+    result = {
+        "status": "partial",
+        "error": "Obsidian did not open",
+        "name": "Research",
+        "space_id": 123,
+        "id": "a" * 32,
+        "windows": [{"app": "Edge"}],
+        "tmux_session": "ws-research",
+    }
+    monkeypatch.setattr(ws, "create_request", lambda _: {})
+    monkeypatch.setattr(ws, "send", lambda _: result)
+    assert ws.main([command, "Research"]) == 1
+    output = capsys.readouterr()
+    message = output.out if command == "alfred-action" else output.err
+    assert "Edge" in message and "Research" in message and "ws-research" in message
+    if command == "create":
+        assert "doorplate switch --id 123" in message
+        assert "workspace result " + "a" * 32 in message
+    else:
+        assert "Use sp" in message
+
+
+def test_json_failure_remains_machine_readable(monkeypatch, capsys):
+    result = {"status": "partial", "error": "App failed", "space_id": 123}
+    monkeypatch.setattr(ws, "create_request", lambda _: {})
+    monkeypatch.setattr(ws, "send", lambda _: result)
+    assert ws.main(["create", "Test", "--json"]) == 1
+    assert json.loads(capsys.readouterr().out) == result

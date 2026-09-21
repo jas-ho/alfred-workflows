@@ -74,7 +74,7 @@ Requests a new window of the chosen app on the current Space, then focuses it on
 
 **Keywords:** `ns`, `newspace`
 
-`ns Research` creates a named desktop with fresh browser, blank Obsidian, and Ghostty windows in three columns, then returns to the original desktop. Command-Return stays in the new desktop with the terminal focused. The terminal uses a dedicated tmux session; no note is created automatically.
+`ns Research` creates a named desktop with fresh browser, blank Obsidian, and Ghostty windows in three columns, then returns to the original desktop. Command-Return stays in the new desktop with the terminal focused. The terminal uses a dedicated, readable tmux session name such as `ws-research`; no note is created automatically.
 
 The same operation is available to agents as `workspace create "Research"`, with optional `--directory`, repeated `--url`, `--note`, `--tmux-session`, `--layout`, and `--stay`. The app list and layout are configurable; ordinary apps use their new-window menu, while small helpers supply tmux/URL/note behavior. Partial failures preserve completed work and produce explicit results. See [configuration, CLI, and setup](workflows/new-workspace/README.md).
 

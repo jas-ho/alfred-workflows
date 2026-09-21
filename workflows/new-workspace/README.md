@@ -14,9 +14,9 @@ workspace check
 workspace result <operation-id>
 ```
 
-Name is the only required input. The terminal defaults to home and a unique new tmux session. `--tmux-session` attaches an existing session without moving or detaching its other clients. A project directory only affects a newly created session; attaching an existing session preserves its working state. Obsidian opens an empty pane unless an existing vault-relative note is specified. It never creates a note. URLs become tabs in the single new browser window.
+Name is the only required input. The terminal defaults to home and a unique new tmux session named after the workspace, such as `ws-research` (`-2`, `-3`, etc. on collision). Existing sessions are never reused implicitly. `--tmux-session` attaches an existing session without moving or detaching its other clients. A project directory only affects a newly created session; attaching an existing session preserves its working state. Obsidian opens an empty pane unless an existing vault-relative note is specified. It never creates a note. URLs become tabs in the single new browser window.
 
-Every `create` means a fresh desktop, even with the same name. There is no implicit reuse or retry. The command returns a nonzero exit code for partial/uncertain outcomes and keeps successful work. JSON results include the operation ID, desktop ID, confirmed window IDs/PIDs, tmux session, failed stage, and return outcome. `result` reads the recorded result without repeating the operation. A timeout does not prove that nothing was created.
+Every `create` means a fresh desktop, even with the same name. There is no implicit reuse or retry. The command returns a nonzero exit code for partial/uncertain outcomes and keeps successful work. JSON results include the operation ID, desktop ID, confirmed window IDs/PIDs, tmux session, failed stage, and return outcome. `result` reads the recorded result without repeating the operation. A timeout does not prove that nothing was created. Human-readable failures name the kept windows/session and provide a `doorplate switch --id …` command; Alfred failures point to `sp`. Inspect the partial workspace before creating another one.
 
 ## Configuration
 
@@ -57,7 +57,7 @@ Reload Hammerspoon, then run `workspace check`. Install the Alfred workflow norm
 
 The CLI submits local JSON data to a Hammerspoon directory watcher. Hammerspoon executes GUI operations in the logged-in session; the caller need not have a working Hammerspoon IPC connection. Calls are serialized, requests expire if unacknowledged, and startup requests are not replayed. Results remain in `~/.local/state/workspace` for diagnosis. The worker coordinates its busy state with the existing close/prune operations in Jason's Hammerspoon configuration.
 
-Setup briefly visits the new desktop. Success and ordinary failure both attempt to restore the original stable Space ID, unless `--stay` requests the new one. If Hammerspoon quits or the original desktop disappears, restoration cannot be guaranteed; partial work remains available for inspection.
+Setup briefly visits the new desktop. Success and ordinary failure both attempt to restore the original stable Space ID, unless `--stay` requests the new one. If you switch desktops during setup, it stops opening more windows and leaves you where you moved; results record `return_skipped: "desktop_changed"`. An app command already in progress may still complete, so inspect partial results before retrying. If Hammerspoon quits or the original desktop disappears, restoration cannot be guaranteed; partial work remains available for inspection.
 
 ## Agent boundary
 

@@ -190,6 +190,25 @@ def filter_items(name: str) -> dict:
         }
 
 
+def failure_summary(result: dict, *, compact: bool = False) -> str:
+    lines = [result.get("error", "Workspace setup did not complete")]
+    if result.get("space_id"):
+        windows = result.get("windows") or []
+        apps = ", ".join(w["app"] for w in windows) or "no confirmed windows"
+        lines.append(f"Kept ‘{result.get('name', 'Workspace')}’: {apps}.")
+        if result.get("tmux_session"):
+            lines.append("tmux: " + result["tmux_session"])
+        if compact:
+            lines.append("Use sp to open the desktop; do not repeat ns to resume.")
+        else:
+            lines.append(f"Open desktop: doorplate switch --id {result['space_id']}")
+    if not compact and result.get("id"):
+        lines.append("Details: workspace result " + result["id"])
+    if result.get("uncertain"):
+        lines.append("Some actions may still have completed; inspect before retrying.")
+    return "\n".join(lines)
+
+
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__)
     commands = p.add_subparsers(dest="command", required=True)
@@ -241,7 +260,7 @@ def main(argv: list[str] | None = None) -> int:
             )
         if args.command == "alfred-action":
             if result["status"] != "complete":
-                print(result.get("error", "Workspace setup did not complete"))
+                print(failure_summary(result, compact=True))
         elif args.command != "create" or args.json:
             print(json.dumps(result, ensure_ascii=False))
         elif result["status"] == "complete":
@@ -249,7 +268,7 @@ def main(argv: list[str] | None = None) -> int:
                 f"Created {args.name} with {len(result['windows'])} windows (desktop {result['space_id']})."
             )
         else:
-            print(json.dumps(result, ensure_ascii=False), file=sys.stderr)
+            print(failure_summary(result), file=sys.stderr)
         return 0 if result["status"] in ("complete", "ready") else 1
     except (OSError, ValueError, TypeError, KeyError, RuntimeError) as error:
         payload = {"status": "failed", "error": str(error)}

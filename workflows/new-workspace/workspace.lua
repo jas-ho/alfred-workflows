@@ -36,6 +36,12 @@ function M.start(root, dir)
         local result = ctx.result
         local finish, fail
         local function save() write(request.id, result) end
+        local function checkFocus()
+            if ctx.expectedSpace and hs.spaces.focusedSpace() ~= ctx.expectedSpace then
+                result.focus_changed = true
+                error('Desktop changed during setup; completed work was kept', 0)
+            end
+        end
         local function guard(fn)
             return function(...)
                 if current ~= ctx or ctx.finished then return end
@@ -87,7 +93,17 @@ function M.start(root, dir)
         finish = function()
             if ctx.finishing then return end
             ctx.finishing = true
-            for _, task in ipairs(ctx.tasks) do if task:isRunning() then task:terminate() end end
+            for _, task in ipairs(ctx.tasks) do
+                if task:isRunning() then result.uncertain = true; task:terminate() end
+            end
+            if result.focus_changed or (ctx.expectedSpace and hs.spaces.focusedSpace() ~= ctx.expectedSpace) then
+                result.focus_changed = true
+                result.return_skipped = 'desktop_changed'
+                result.returned = false
+                result.error = result.error or 'Desktop changed during setup; completed work was kept'
+                result.failed_stage = result.failed_stage or result.stage
+                publish(); return
+            end
             result.stage = 'return'
             save()
             local destination = request.stay and result.space_id or result.origin_id
@@ -137,10 +153,12 @@ function M.start(root, dir)
             task('/usr/bin/python3', args, 65, done)
         end
         local function onTarget()
+            checkFocus()
             assert(hs.spaces.focusedSpace() == result.space_id,
                    'Desktop changed during setup; completed windows were kept')
         end
         local function layout()
+            onTarget()
             local lastWindow
             for _, item in ipairs(result.windows) do
                 local w = appWindows(item.bundle)[item.id]
@@ -178,12 +196,13 @@ function M.start(root, dir)
             result.stage = 'open:' .. spec.name; save()
             local before = appWindows(spec.bundle)
             local function identify(code, output, err)
+                local details = {}
+                if output ~= '' then details = hs.json.decode(output) or {} end
+                if details.tmux_session then result.tmux_session = details.tmux_session; save() end
                 if code ~= 0 then
                     result.uncertain = true
                     fail(spec.name .. ': ' .. (err ~= '' and err or output)); return
                 end
-                local details = {}
-                if output ~= '' then details = hs.json.decode(output) or {} end
                 local found = {}
                 waitFor(function()
                     found = {}
@@ -218,7 +237,7 @@ function M.start(root, dir)
             end
             if spec.opener ~= 'generic' then
                 if spec.opener == 'ghostty' then
-                    result.tmux_session = request.tmux_session or 'ws-' .. request.id:sub(1,12)
+                    result.tmux_session = request.tmux_session
                     save()
                 end
                 helper('open', index, identify); return
@@ -235,13 +254,16 @@ function M.start(root, dir)
             end
         end
         local function enter()
+            checkFocus()
             result.stage = 'enter'; save()
             switchTo(result.space_id, function(reached)
                 assert(reached, 'Could not enter the new desktop')
+                ctx.expectedSpace = result.space_id
                 after(.5, function() openNext(1) end)
             end)
         end
         local function addDesktop()
+            checkFocus()
             result.stage = 'create'; save()
             local before = hs.spaces.allSpaces()[ctx.display]
             assert(before, 'Display disappeared')
@@ -256,6 +278,7 @@ function M.start(root, dir)
             end, 3, function(created)
                 assert(created and #added == 1, 'Could not identify the newly created desktop')
                 result.space_id = added[1]
+                checkFocus()
                 result.stage = 'rename'; save()
                 task('/usr/bin/python3', {os.getenv('HOME') .. '/.local/bin/doorplate',
                      'rename', request.name, '--id', tostring(result.space_id)}, 70, function(code, out, err)
@@ -266,6 +289,7 @@ function M.start(root, dir)
         end
         guard(function()
             result.origin_id = hs.spaces.focusedSpace()
+            ctx.expectedSpace = result.origin_id
             ctx.focus = hs.window.focusedWindow()
             ctx.display = hs.spaces.spaceDisplay(result.origin_id)
             assert(hs.spaces.spaceType(result.origin_id) == 'user', 'Start from a regular desktop')
