@@ -70,18 +70,17 @@ Requests a new window of the chosen app on the current Space, then focuses it on
 
 ---
 
-### [pjws](dist/pjws.alfredworkflow)
+### [New Workspace](dist/New%20Workspace.alfredworkflow)
 
-**Keyword:** `pj`
+**Keywords:** `ns`, `newspace`
 
-Front-end for the [pjws](https://github.com/jas-ho/dotfiles/tree/main/.config/pjws) project workspace orchestrator. Discovers every `~/Projects/*/*/README.md` with a `pjws:` frontmatter block, annotates each project with runtime state (slot, per-adapter status, Obsidian singleton owner), and sorts loaded projects to the top.
+`ns Research` creates a named desktop with fresh browser, blank Obsidian, and Ghostty windows in three columns, then returns to the original desktop. Command-Return stays in the new desktop with the terminal focused. The terminal uses a dedicated tmux session; no note is created automatically.
 
-- `Return` → `pjws switch <name>` (falls back to load when not loaded)
-- `Cmd+Return` → `pjws unload <name>` (only enabled for loaded projects)
+The same operation is available to agents as `workspace create "Research"`, with optional `--directory`, repeated `--url`, `--note`, `--tmux-session`, `--layout`, and `--stay`. The app list and layout are configurable; ordinary apps use their new-window menu, while small helpers supply tmux/URL/note behavior. Partial failures preserve completed work and produce explicit results. See [configuration, CLI, and setup](workflows/new-workspace/README.md).
 
-Matches on slug, split slug segments, title words, and category — type `gen` to find `enhancing-genomics`.
+**Dependencies:** Hammerspoon workspace worker, Doorplate CLI, Python 3; default recipe also needs tmux, Ghostty, Edge, and Obsidian with CLI enabled.
 
-**Dependencies:** pjws orchestrator at `~/.config/pjws/bin/pjws`, Python 3
+**Retired:** the previous `pj`/pjws workflow is disabled and [archived in place](workflows/pjws/ARCHIVED.md). It is no longer built. Its old project data and tmux sessions are retained.
 
 ---
 

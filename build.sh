@@ -6,6 +6,8 @@ DIST_DIR="dist"
 mkdir -p "$DIST_DIR"
 
 for workflow_dir in workflows/*/; do
+    # Retain retired sources without continuing to publish them.
+    [[ -f "$workflow_dir/ARCHIVED.md" ]] && continue
     name=$(basename "$workflow_dir")
     # Get display name from info.plist (preserves casing like "macOS")
     pretty_name=$(plutil -extract name raw "$workflow_dir/info.plist" 2>/dev/null ||

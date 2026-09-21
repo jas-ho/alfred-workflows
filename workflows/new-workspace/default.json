@@ -1,0 +1,8 @@
+{
+  "layout": "columns",
+  "apps": [
+    {"app": "/Applications/Microsoft Edge.app", "opener": "chromium"},
+    {"app": "/Applications/Obsidian.app", "opener": "obsidian", "vault": "Projects"},
+    {"app": "/Applications/Ghostty.app", "opener": "ghostty"}
+  ]
+}

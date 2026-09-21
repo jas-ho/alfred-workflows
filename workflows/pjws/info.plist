@@ -27,7 +27,7 @@
 	<key>description</key>
 	<string>Switch, load, and unload pjws project workspaces.</string>
 	<key>disabled</key>
-	<false/>
+	<true/>
 	<key>name</key>
 	<string>pjws</string>
 	<key>objects</key>
@@ -123,16 +123,16 @@ Requires pjws installed at ~/.config/pjws/bin/pjws (chezmoi-managed).</string>
 		<key>PJWS-FILTER-0001</key>
 		<dict>
 			<key>xpos</key>
-			<real>200</real>
+			<real>200.0</real>
 			<key>ypos</key>
-			<real>300</real>
+			<real>300.0</real>
 		</dict>
 		<key>PJWS-ACTION-0001</key>
 		<dict>
 			<key>xpos</key>
-			<real>450</real>
+			<real>450.0</real>
 			<key>ypos</key>
-			<real>300</real>
+			<real>300.0</real>
 		</dict>
 	</dict>
 	<key>userconfigurationconfig</key>
