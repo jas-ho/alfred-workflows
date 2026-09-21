@@ -103,11 +103,14 @@ function rename(id, name, backup, requireActive) {
         const previous = meta[id] || {icon: '', color: -1, seconds: 0};
         if (typeof previous !== 'object' || Array.isArray(previous)) fail('Unrecognized desktop metadata.');
         previous.name = name;
+        // Doorplate 1.6.2: -1 is Automatic, -2 is Transparent. Respect explicit colors.
+        if (previous.color === undefined || previous.color === -1) previous.color = -2;
         meta[id] = previous;
         const data = $(JSON.stringify(meta)).dataUsingEncoding($.NSUTF8StringEncoding);
         prefs.setObjectForKey(data, META);
         if (!prefs.synchronize) fail('Could not save Doorplate’s names.');
-        if ((readMeta(defaults())[id] || {}).name !== name) fail('Saved name verification failed.');
+        const saved = readMeta(defaults())[id] || {};
+        if (saved.name !== name || saved.color !== previous.color) fail('Saved desktop verification failed.');
     } catch (error) {
         failure = error;
     } finally {

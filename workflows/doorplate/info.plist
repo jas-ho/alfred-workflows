@@ -206,7 +206,9 @@
 space back: return to the previous desktop
 sn &lt;name&gt;: rename the current desktop
 
-Renaming briefly restarts Doorplate and preserves its other settings. Verified for Doorplate 1.6.2. Previous names are backed up in the workflow data folder. Fullscreen Spaces cannot be named.</string>
+Renaming briefly restarts Doorplate and preserves its other settings. Verified for Doorplate 1.6.2. Previous names are backed up in the workflow data folder. Fullscreen Spaces cannot be named.
+
+Naming also changes Automatic color to Transparent; explicit colors are preserved. New desktops keep their default appearance until named with sn or the CLI. No background watcher is installed.</string>
 	<key>uidata</key>
 	<dict>
 		<key>DP-ACTION</key>

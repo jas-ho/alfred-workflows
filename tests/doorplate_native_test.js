@@ -8,6 +8,11 @@ const source = fs.readFileSync(path.join(__dirname, '../workflows/doorplate/nati
 function setup(options = {}) {
     const original = {'5': {name: 'Old', icon: '🪟', color: 3, seconds: 42, future: {keep: true}},
         '3': {name: 'Other', color: 2, seconds: 6}};
+    if (options.newDesktop) delete original['5'];
+    else if ('color' in options) {
+        if (options.color === undefined) delete original['5'].color;
+        else original['5'].color = options.color;
+    }
     let meta = structuredClone(original), alive = true, backup, writes = 0, launched = 0;
     let reads = 0;
     const data = text => ({text, isNil: () => false,
@@ -29,7 +34,7 @@ function setup(options = {}) {
     const app = {get terminate() {
         if (options.quitFailure) return false;
         // Simulate Doorplate flushing its latest tracked time while quitting.
-        meta['5'].seconds = 99;
+        if (meta['5']) meta['5'].seconds = 99;
         alive = false;
         return true;
     }};
@@ -58,6 +63,25 @@ assert.deepEqual(result.meta['3'], result.original['3']);
 assert.equal(result.backup['5'].name, 'Old');
 assert.equal(result.backup['5'].seconds, 99);
 assert.equal(result.launched, 1);
+
+for (const [options, expected] of [
+    [{newDesktop: true}, -2],
+    [{color: undefined}, -2],
+    [{color: -1}, -2],
+    [{color: -2}, -2],
+    [{color: 0}, 0],
+    [{color: 3}, 3],
+    [{color: 9}, 9],
+]) {
+    const test = setup(options);
+    test.rename();
+    const state = test.result();
+    assert.equal(state.meta['5'].color, expected);
+    assert.equal(state.meta['5'].name, 'Bücher & "Quotes"');
+    assert.deepEqual(state.meta['3'], state.original['3']);
+    assert.equal(state.backup['5']?.color, state.original['5']?.color);
+    assert.equal(state.launched, 1);
+}
 
 for (const [options, error, relaunches] of [
     [{version: '1.7.0'}, /rechecking/, 0],

@@ -4,6 +4,8 @@
 
 Run `./doorplate.py --help` for the equivalent CLI. Commands return JSON; failures go to stderr with exit status 1. Use `list` to obtain fresh IDs, and `rename "Name" --id ID` to name a specific desktop without switching to it. Live WindowServer access is required, so use a graphical login session; an isolated background or SSH process may not have access.
 
+Naming a desktop through `sn` or the CLI also changes its Automatic color to Transparent. Explicit color choices are preserved. This happens in the same saved update as the name and survives reboot. Newly created desktops keep Doorplate's default appearance until you name them through this workflow; names entered directly in Doorplate do not trigger this rule. No background watcher is installed.
+
 ## Compatibility
 
 Switching uses `doorplate://switch/NUMBER` and `doorplate://back`. Listing uses macOS SkyLight and Doorplate's `Doorplate.meta.v2` preference. Renaming targets the observed Doorplate 1.6.2 format and fails closed on other versions. The native helper does not perform UI scripting or request Accessibility access.
