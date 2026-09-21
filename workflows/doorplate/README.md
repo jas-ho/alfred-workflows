@@ -6,7 +6,17 @@ Run `./doorplate.py --help` for the equivalent CLI. Commands return JSON; failur
 
 Naming a desktop through `sn` or the CLI also changes its Automatic color to Transparent. Explicit color choices are preserved. This happens in the same saved update as the name and survives reboot. Newly created desktops keep Doorplate's default appearance until you name them through this workflow; names entered directly in Doorplate do not trigger this rule. No background watcher is installed.
 
-## Compatibility
+## Close a desktop
+
+`cs [name or number]` lists desktops with the current one first. Return visits the selected desktop and displays its windows for confirmation. Cancel is the default. Confirming requests normal window closes one at a time, then removes the desktop only after verifying that its exclusive windows have closed. Windows shared with other desktops stay open. The last normal desktop on a display cannot be closed.
+
+Save prompts are never answered automatically. A window that remains open, changed window membership, or switching desktops stops the operation; handle the prompt and run `cs` again. Earlier successful closes are not undone. Closing terminal windows leaves sessions and agents inside tmux running; processes attached directly to the terminal may exit. Applications are not quit or killed.
+
+The CLI equivalent is `doorplate close [name or number]` or `doorplate close --id ID`, defaulting to the current desktop. Its JSON `preview_requested` status acknowledges the request, not completed closure. GUI confirmation remains required. This is not yet an unattended agent teardown API.
+
+Closing additionally requires Jason's Hammerspoon configuration (`~/bin/hammerspoon/space-close.lua`, loaded from `init.lua`), its Accessibility permission, `cg-real-windows`, and the `~/.local/bin/hs` IPC client. Reload Hammerspoon after backend changes. The backend is maintained in the separate `~/bin` repository and is not included in the workflow zip. Mocked backend tests: `uv run ~/bin/tests/test-space-close.py`.
+
+## Native interface
 
 Switching uses `doorplate://switch/NUMBER` and `doorplate://back`. Listing uses macOS SkyLight and Doorplate's `Doorplate.meta.v2` preference. Renaming targets the observed Doorplate 1.6.2 format and fails closed on other versions. The native helper does not perform UI scripting or request Accessibility access.
 

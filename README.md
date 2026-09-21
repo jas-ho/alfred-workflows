@@ -25,7 +25,9 @@ Search results show desktop numbers and mark the current desktop. Renaming previ
 
 Switching uses Doorplate's URL interface. Renaming briefly quits and relaunches Doorplate without activation, updates the selected name in its private preferences, and changes Automatic color to Transparent while preserving explicit color choices. New desktops receive this appearance when named through `sn` or the CLI; it is saved across reboots. A separate copy of the previous metadata is saved in Alfred's workflow data directory (`names-before-rename-*.json`). Other desktop metadata and app settings are preserved. The rename format targets Doorplate 1.6.2; newer versions require rechecking before renaming is enabled. No background syncing is installed. [Backup recovery](workflows/doorplate/README.md).
 
-**Dependencies:** [Doorplate](https://doorplate.app/) installed and set up, Python 3, macOS. Doorplate needs its normal Accessibility permission; the workflow does not use UI scripting. Run from Alfred's graphical login session.
+`cs [name or number]` previews closing a desktop and its windows, with the current desktop first. It preserves shared windows and tmux sessions, stops on save prompts or changed desktop contents, and removes the desktop only after verifying closure. Requires the separate Hammerspoon backend in `~/bin/hammerspoon/space-close.lua`; see [setup and behavior](workflows/doorplate/README.md#close-a-desktop). CLI: `doorplate close --id ID` (requires GUI confirmation).
+
+**Dependencies:** [Doorplate](https://doorplate.app/) installed and set up, Python 3, macOS. Doorplate needs its normal Accessibility permission. Closing desktops additionally uses Hammerspoon Accessibility and Mission Control automation. Run from Alfred's graphical login session.
 
 The same implementation exposes a CLI for terminals and agents, with JSON output and nonzero exit status on failure:
 

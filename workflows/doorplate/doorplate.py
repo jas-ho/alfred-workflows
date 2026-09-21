@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import fcntl
 import json
 import os
@@ -91,13 +92,35 @@ def rename_items(state: dict, query: str) -> list[dict]:
     ]
 
 
+def close_items(state: dict, query: str) -> list[dict]:
+    terms = query.casefold().split()
+    desktops = sorted(state["desktops"], key=lambda s: s["id"] != state["active"])
+    items = []
+    for space in desktops:
+        if not all(
+            t in f"{space['number']} desktop {space['name']}".casefold() for t in terms
+        ):
+            continue
+        label = space["name"] or f"Desktop {space['number']}"
+        current = "Current desktop · " if space["id"] == state["active"] else ""
+        items.append(
+            {
+                "title": f"Close {space['number']} · {label}…",
+                "subtitle": current
+                + "Review its windows before closing them and removing this desktop",
+                "icon": {"path": "DP-CLOSE.png"},
+                "arg": action_arg("close", id=space["id"]),
+                "valid": True,
+            }
+        )
+    return items or [error_item("No matching desktops.")]
+
+
 def filter_main(mode: str, query: str) -> None:
     try:
         state = native("snapshot")
-        items = (
-            rename_items(state, query)
-            if mode == "rename"
-            else space_items(state, query)
+        items = {"rename": rename_items, "close": close_items}.get(mode, space_items)(
+            state, query
         )
     except (RuntimeError, OSError, ValueError, subprocess.TimeoutExpired) as error:
         items = [error_item(str(error))]
@@ -120,6 +143,35 @@ def perform_action(payload: dict) -> str:
     action = payload["action"]
     if action == "back":
         url = "doorplate://back"
+    elif action == "close":
+        state = native("snapshot")
+        close_target = resolve_target(state, None, payload["id"])
+        label = close_target["name"] or f"Desktop {close_target['number']}"
+        # Base64 keeps the user-provided name out of Lua syntax entirely.
+        encoded = base64.b64encode(label.encode()).decode("ascii")
+        space_id = int(close_target["id"])
+        if space_id <= 0:
+            raise RuntimeError("Invalid desktop ID.")
+        script = (
+            "return hs.json.encode(SpaceClose and SpaceClose.request("
+            f'{space_id}, hs.base64.decode("{encoded}")) '
+            'or {error="Desktop closing is not loaded in Hammerspoon. Reload its configuration."})'
+        )
+        result = subprocess.run(
+            [str(Path.home() / ".local/bin/hs"), "-q", "-t", "3", "-c", script],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+        if result.returncode:
+            raise RuntimeError(result.stderr.strip() or "Could not reach Hammerspoon.")
+        response = json.loads(result.stdout)
+        if response.get("error"):
+            raise RuntimeError(response["error"])
+        if response.get("status") != "preview_requested":
+            raise RuntimeError("Hammerspoon did not acknowledge the preview request.")
+        return ""
     elif action == "switch":
         # Resolve the stable ID again: desktop order may have changed since filtering.
         state = native("snapshot")
@@ -222,6 +274,12 @@ def cli_main(argv: list[str] | None = None) -> int:
     )
     switch.add_argument("query", nargs="?")
     switch.add_argument("--id", dest="space_id")
+    close = commands.add_parser(
+        "close",
+        help="Preview closing a desktop and its windows; requires GUI confirmation",
+    )
+    close.add_argument("query", nargs="?")
+    close.add_argument("--id", dest="space_id")
     rename = commands.add_parser(
         "rename", help="Name the current desktop, or an explicit --id without switching"
     )
@@ -234,7 +292,19 @@ def cli_main(argv: list[str] | None = None) -> int:
             output = native("snapshot")
         else:
             payload = {"action": args.command}
-            if args.command == "switch":
+            if args.command == "close":
+                if args.query and args.space_id:
+                    raise RuntimeError(
+                        "Specify either a name/number or --id, not both."
+                    )
+                state = native("snapshot")
+                target = resolve_target(
+                    state,
+                    args.query,
+                    args.space_id or (state["active"] if not args.query else None),
+                )
+                payload["id"] = target["id"]
+            elif args.command == "switch":
                 if bool(args.query) == bool(args.space_id):
                     raise RuntimeError(
                         "Specify either a name/number or --id, not both."
@@ -252,6 +322,8 @@ def cli_main(argv: list[str] | None = None) -> int:
                 )
             message = perform_action(payload)
             output = {"ok": True, **payload}
+            if args.command == "close":
+                output["status"] = "preview_requested"
             if message:
                 output["message"] = message
         print(json.dumps(output, ensure_ascii=False))

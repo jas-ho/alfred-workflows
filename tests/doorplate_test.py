@@ -185,3 +185,68 @@ def test_cli_fullscreen_cannot_rename_current(state, monkeypatch, capsys):
     monkeypatch.setattr(dp, "native", lambda *args: state)
     assert dp.cli_main(["rename", "Research"]) == 1
     assert json.loads(capsys.readouterr().err)["ok"] is False
+
+
+def test_close_picker_current_first_without_alfred_learning(state):
+    state["active"] = "2"
+    items = dp.close_items(state, "")
+    assert [json.loads(i["arg"])["id"] for i in items] == ["2", "5", "3"]
+    assert all("uid" not in i for i in items)
+    assert items[0]["subtitle"].startswith("Current desktop")
+    assert json.loads(dp.close_items(state, "writing research")[0]["arg"])["id"] == "5"
+    assert not dp.close_items(state, "missing")[0]["valid"]
+
+
+def test_close_deleted_desktop_never_calls_backend(state, monkeypatch):
+    monkeypatch.setattr(dp, "native", lambda *args: state)
+    monkeypatch.setattr(
+        dp.subprocess, "run", lambda *a, **k: pytest.fail("Unexpected close")
+    )
+    with pytest.raises(RuntimeError, match="No matching desktop"):
+        dp.perform_action({"action": "close", "id": "deleted"})
+
+
+def test_close_transports_literal_name_and_stable_id(state, monkeypatch):
+    import base64
+
+    name = '"; dangerous() -- Bücher'
+    state["desktops"][0]["name"] = name
+    monkeypatch.setattr(dp, "native", lambda *args: state)
+    calls = []
+
+    def run(args, **kwargs):
+        calls.append((args, kwargs))
+        return subprocess.CompletedProcess(
+            args, 0, '{"status":"preview_requested"}', ""
+        )
+
+    monkeypatch.setattr(dp.subprocess, "run", run)
+    assert dp.perform_action({"action": "close", "id": "5"}) == ""
+    args, kwargs = calls[0]
+    assert "SpaceClose.request(5," in args[-1]
+    assert name not in args[-1]
+    assert base64.b64encode(name.encode()).decode() in args[-1]
+    assert kwargs["timeout"] == 8
+
+
+@pytest.mark.parametrize("response", ['{"error":"busy"}', '{"status":"closed"}'])
+def test_close_requires_backend_preview_ack(state, monkeypatch, response):
+    monkeypatch.setattr(dp, "native", lambda *args: state)
+    monkeypatch.setattr(
+        dp.subprocess,
+        "run",
+        lambda args, **kw: subprocess.CompletedProcess(args, 0, response, ""),
+    )
+    with pytest.raises(RuntimeError):
+        dp.perform_action({"action": "close", "id": "5"})
+
+
+def test_cli_close_reports_pending_confirmation(state, monkeypatch, capsys):
+    monkeypatch.setattr(dp, "native", lambda *args: state)
+    calls = []
+    monkeypatch.setattr(
+        dp, "perform_action", lambda payload: calls.append(payload) or ""
+    )
+    assert dp.cli_main(["close"]) == 0
+    assert calls == [{"action": "close", "id": "5"}]
+    assert json.loads(capsys.readouterr().out)["status"] == "preview_requested"
