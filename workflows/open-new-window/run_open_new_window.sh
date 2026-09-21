@@ -22,11 +22,11 @@ if [[ -z "$BUNDLE_ID" ]]; then
     exit 0
 fi
 
-MSG=$(/usr/bin/osascript "$SCRIPT_DIR/open_new_window.applescript" "$APP_PATH" "$BUNDLE_ID" 2>&1)
+MSG=$(/usr/bin/osascript "$SCRIPT_DIR/open_new_window.applescript" "$APP_PATH" "$BUNDLE_ID" "$SCRIPT_DIR/open_obsidian_window.py" 2>&1)
 RC=$?
 # osascript output is single-line on success; join lines so errors stay readable
 MSG="${${MSG//$'\r'/ }//$'\n'/ }"
-if (( RC != 0 )); then
+if ((RC != 0)); then
     # osascript itself failed (e.g. Accessibility/Automation denied) — never silent
     echo -n "Error: ${MSG:-osascript failed (exit $RC)}"
     exit 0

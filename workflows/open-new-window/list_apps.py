@@ -3,11 +3,24 @@
 
 import json
 import os
+import re
 import subprocess
 import tempfile
 import time
 
 CACHE_TTL = 5  # seconds
+
+
+def match_terms(name):
+    """Keep full-name matching and add compact names and multiword initials."""
+    words = re.sub(r"([a-z])([A-Z])", r"\1 \2", name).split()
+    terms = [name, " ".join(words)]
+    if len(words) > 1:
+        terms.extend(["".join(words), "".join(word[0] for word in words)])
+    if name.casefold().startswith("visual studio code"):
+        terms.append("vscode vs code")
+    return " ".join(dict.fromkeys(terms))
+
 
 cache_dir = os.environ.get("alfred_workflow_cache", "/tmp/open-new-window-cache")
 os.makedirs(cache_dir, exist_ok=True)
@@ -62,12 +75,13 @@ for path in sorted(apps, key=lambda p: os.path.basename(p).lower()):
     name = os.path.basename(path).removesuffix(".app")
     items.append(
         {
+            "uid": path,
             "title": name,
-            "subtitle": "Open new window here",
+            "subtitle": "↵ New window on this desktop",
             "arg": path,
             "autocomplete": name,
             "icon": {"type": "fileicon", "path": path},
-            "match": name,
+            "match": match_terms(name),
         }
     )
 

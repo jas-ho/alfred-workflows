@@ -21,19 +21,6 @@
 				<false/>
 			</dict>
 		</array>
-		<key>2A7E5F91-4C38-4B26-9D14-8E6B3A0C57D2</key>
-		<array>
-			<dict>
-				<key>destinationuid</key>
-				<string>7FC04458-F866-49BE-8BA5-5B97DFB867DB</string>
-				<key>modifiers</key>
-				<integer>0</integer>
-				<key>modifiersubtext</key>
-				<string></string>
-				<key>vitoclose</key>
-				<false/>
-			</dict>
-		</array>
 		<key>7FC04458-F866-49BE-8BA5-5B97DFB867DB</key>
 		<array>
 			<dict>
@@ -87,7 +74,7 @@
 				<key>escaping</key>
 				<integer>68</integer>
 				<key>keyword</key>
-				<string>newwin</string>
+				<string>wn||nw||newwin</string>
 				<key>queuedelaycustom</key>
 				<integer>3</integer>
 				<key>queuedelayimmediatelyinitially</key>
@@ -105,7 +92,7 @@
 				<key>scriptfile</key>
 				<string>./list_apps.py</string>
 				<key>subtext</key>
-				<string>Search and launch applications</string>
+				<string>Choose an app to open a new window on this desktop</string>
 				<key>title</key>
 				<string>Open New Window</string>
 				<key>type</key>
@@ -117,55 +104,6 @@
 			<string>alfred.workflow.input.scriptfilter</string>
 			<key>uid</key>
 			<string>13D38362-E5BC-4690-9901-C526DFB31078</string>
-			<key>version</key>
-			<integer>3</integer>
-		</dict>
-		<dict>
-			<key>config</key>
-			<dict>
-				<key>alfredfiltersresults</key>
-				<true/>
-				<key>alfredfiltersresultsmatchmode</key>
-				<integer>2</integer>
-				<key>argumenttreatemptyqueryasnil</key>
-				<false/>
-				<key>argumenttrimmode</key>
-				<integer>0</integer>
-				<key>argumenttype</key>
-				<integer>1</integer>
-				<key>escaping</key>
-				<integer>68</integer>
-				<key>keyword</key>
-				<string>nw</string>
-				<key>queuedelaycustom</key>
-				<integer>3</integer>
-				<key>queuedelayimmediatelyinitially</key>
-				<true/>
-				<key>queuedelaymode</key>
-				<integer>0</integer>
-				<key>queuemode</key>
-				<integer>1</integer>
-				<key>runningsubtext</key>
-				<string>Loading apps...</string>
-				<key>script</key>
-				<string></string>
-				<key>scriptargtype</key>
-				<integer>1</integer>
-				<key>scriptfile</key>
-				<string>./list_apps.py</string>
-				<key>subtext</key>
-				<string>Search and launch applications</string>
-				<key>title</key>
-				<string>Open New Window</string>
-				<key>type</key>
-				<integer>8</integer>
-				<key>withspace</key>
-				<true/>
-			</dict>
-			<key>type</key>
-			<string>alfred.workflow.input.scriptfilter</string>
-			<key>uid</key>
-			<string>2A7E5F91-4C38-4B26-9D14-8E6B3A0C57D2</string>
 			<key>version</key>
 			<integer>3</integer>
 		</dict>
@@ -236,15 +174,21 @@
 	<key>readme</key>
 	<string>Open a new window of an app on the current Space without switching Spaces.
 
-Keywords: newwin, nw
+Keywords: wn (window new), nw, newwin
 
 Features:
 - Lists all .app bundles found by Spotlight
-- Client-side filtering by Alfred (instant after first load)
+- Client-side filtering by Alfred (instant after first load), including app initials and compact names
+- Learns from selected apps; wn, nw and newwin share the same selection history
+- Tab completes the app name; Return requests a new window on this desktop
 - 5-second cache for fast keystroke response
 - Shows app icons
 - Creates a new window via the app's own new-window menu item while backgrounded, then focuses it
-- Falls back to Cmd+N with a notification for apps without a discoverable new-window menu item</string>
+- Recognizes pop-out commands such as Beeper's Open Chat in New Window
+- Obsidian uses its CLI to open a blank window in the active vault (requires installer 1.12.7+, an open vault, and Settings &gt; General &gt; Command line interface)
+- Supports recognized Cmd+N document commands such as New and New File
+- Reports unsupported apps instead of sending Cmd+N, which could create a note or chat
+- Window placement depends on the app; existing windows are not moved between Spaces</string>
 	<key>uidata</key>
 	<dict>
 		<key>13D38362-E5BC-4690-9901-C526DFB31078</key>
@@ -253,13 +197,6 @@ Features:
 			<real>200</real>
 			<key>ypos</key>
 			<real>300</real>
-		</dict>
-		<key>2A7E5F91-4C38-4B26-9D14-8E6B3A0C57D2</key>
-		<dict>
-			<key>xpos</key>
-			<real>200</real>
-			<key>ypos</key>
-			<real>450</real>
 		</dict>
 		<key>7FC04458-F866-49BE-8BA5-5B97DFB867DB</key>
 		<dict>

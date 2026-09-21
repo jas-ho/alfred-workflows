@@ -54,11 +54,13 @@ Launch applications using Spotlight (mdfind) instead of Alfred's native file cac
 
 ### [Open New Window](dist/Open%20New%20Window.alfredworkflow)
 
-**Keyword:** `newwin` or `nw`
+**Keywords:** `wn` (window new); `nw` and `newwin` also work. For example, `wn Safari` opens a new Safari window on this desktop. The workflow uses a window-and-plus icon; app results show each app's own icon.
 
-Opens a new window of the chosen app on the current Space without switching Spaces. Creates the window via the app's own new-window menu item while the app is in the background, then focuses it. Falls back to Cmd+N with a notification for apps without a discoverable new-window menu item.
+Match app names, word prefixes, or initials (`gc` for Google Chrome, `vsc` or `vscode` for Visual Studio Code). Alfred learns from your selections across all three keywords. Tab completes the selected app's name; Return requests a new window on this desktop.
 
-**Dependencies:** Python 3, Accessibility permission for Alfred
+Requests a new window of the chosen app on the current Space, then focuses it once an additional window is detected. Uses the app's menu command while backgrounded, including recognized Cmd+N document commands (New, New File, New Document) and pop-out commands such as Beeper's "Open Chat in New Window" (opens the selected chat). Obsidian uses its CLI to open a blank window in the active vault because its menu command does nothing while unfocused. Apps without a supported command, or which require focus to create windows, show a notification. Never sends a blind Cmd+N, which could create a note or chat instead. Window placement ultimately depends on the app; existing windows are not moved between Spaces.
+
+**Dependencies:** Python 3, Accessibility permission for Alfred. For Obsidian: [installer 1.12.7+](https://help.obsidian.md/cli), an open vault when Obsidian is already running, and **Settings → General → Command line interface** enabled.
 
 ---
 
