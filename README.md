@@ -29,22 +29,22 @@ Search results show desktop numbers and mark the current desktop. Renaming previ
 
 Switching uses Doorplate's URL interface. Renaming briefly quits and relaunches Doorplate without activation, updates the selected name in its private preferences, and changes Automatic color to Transparent while preserving explicit color choices. New desktops receive this appearance when named through `sn` or the CLI; it is saved across reboots. A separate copy of the previous metadata is saved in Alfred's workflow data directory (`names-before-rename-*.json`). Other desktop metadata and app settings are preserved. The rename format targets Doorplate 1.6.2; newer versions require rechecking before renaming is enabled. No background syncing is installed. [Backup recovery](workflows/doorplate/README.md).
 
-`cs [name or number]` closes desktops, with the current desktop listed first. Empty desktops close immediately; desktops with windows get one confirmation where you are. It preserves shared windows, stops on save prompts or changed contents, and verifies removal. Closing the active desktop returns via `space back`, with a neighbor fallback. Requires the separate Hammerspoon backend in `~/bin/hammerspoon/space-close.lua`; see [setup and behavior](workflows/doorplate/README.md#close-a-desktop). CLI: `doorplate close --id ID` (GUI confirmation when windows need closing).
+`cs [name or number]` closes desktops, with the current desktop listed first. Empty desktops close immediately; desktops with windows get one confirmation where you are. It preserves shared windows, stops on save prompts or changed contents, and verifies removal. Closing the active desktop returns via `space back`, with a neighbor fallback. Requires the separate Hammerspoon backend in `~/bin/hammerspoon/space-close.lua`; see [setup and behavior](workflows/doorplate/README.md#close-a-desktop). CLI: `workspace close --id ID` previews; add `--yes` to execute and wait for verified removal.
 
 **Dependencies:** [Doorplate](https://doorplate.app/) installed and set up, Python 3, macOS. Doorplate needs its normal Accessibility permission. Closing desktops additionally uses Hammerspoon Accessibility and Mission Control automation. Run from Alfred's graphical login session.
 
 The same implementation exposes a CLI for terminals and agents, with JSON output and nonzero exit status on failure:
 
 ```bash
-workflows/doorplate/doorplate.py list
-workflows/doorplate/doorplate.py switch Research
-workflows/doorplate/doorplate.py switch --id 5
-workflows/doorplate/doorplate.py rename "Research"             # current desktop
-workflows/doorplate/doorplate.py rename "Research" --id 5      # explicit desktop, without switching
-workflows/doorplate/doorplate.py back
+workspace list
+workspace switch Research
+workspace switch --id 5
+workspace rename "Research"             # current desktop
+workspace rename "Research" --id 5      # explicit desktop, without switching
+workspace back
 ```
 
-Use IDs from a fresh `list` result; explicit `--id` avoids dependence on the active desktop. Optionally symlink `doorplate.py` to `~/.local/bin/doorplate`. A background/SSH session without access to the WindowServer cannot list or rename live Spaces; commands fail rather than using cached desktop identities.
+Use IDs from a fresh `workspace list --json` result; explicit `--id` avoids dependence on desktop order. The shared `workspace` CLI sends operations through Hammerspoon in the logged-in GUI session, including calls from agents. See [CLI contract and installation](workflows/new-workspace/README.md#cli). The separate `doorplate` CLI has been removed.
 
 ---
 
@@ -78,7 +78,7 @@ Requests a new window of the chosen app on the current Space, then focuses it on
 
 The same operation is available to agents as `workspace create "Research"`, with optional `--directory`, repeated `--url`, `--note`, `--tmux-session`, `--layout`, and `--stay`. The app list and layout are configurable; ordinary apps use their new-window menu, while small helpers supply tmux/URL/note behavior. Partial failures preserve completed work and produce explicit results. See [configuration, CLI, and setup](workflows/new-workspace/README.md).
 
-**Dependencies:** Hammerspoon workspace worker, Doorplate CLI, Python 3; default recipe also needs tmux, Ghostty, Edge, and Obsidian with CLI enabled.
+**Dependencies:** Hammerspoon workspace worker, Doorplate app, Python 3; default recipe also needs tmux, Ghostty, Edge, and Obsidian with CLI enabled.
 
 **Retired:** the previous `pj`/pjws workflow is disabled and [archived in place](workflows/pjws/ARCHIVED.md). It is no longer built. Its old project data and tmux sessions are retained.
 

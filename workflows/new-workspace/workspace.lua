@@ -27,15 +27,32 @@ function M.start(root, dir)
         assert(hs.json.write(result, path .. '.tmp', false, true))
         assert(os.rename(path .. '.tmp', path))
     end
+    local function busy()
+        return self.busy or SpacePruneBusy or (SpaceClose and SpaceClose.busy) or WinJumpWarmTimer ~= nil
+    end
+    local lifecycle = dofile(root .. '/lifecycle.lua').new(root, {
+        write=write, busy=busy, setBusy=function(value) self.busy=value end,
+    })
 
     local function create(request)
-        local ctx = {request=request, result={id=request.id, status='running',
+        local ctx = {request=request, result={id=request.id, operation='create', status='running',
                      name=request.name, windows={}, stage='preflight'}, timers={}, tasks={}}
         current = ctx
         self.busy = true
         local result = ctx.result
         local finish, fail
         local function save() write(request.id, result) end
+        ctx.stop = function()
+            if ctx.finished then return end
+            ctx.finished = true
+            for _, timer in ipairs(ctx.timers) do timer:stop() end
+            for _, task in ipairs(ctx.tasks) do if task:isRunning() then task:terminate() end end
+            result.status, result.error_code = 'uncertain', 'worker_stopped'
+            result.error = 'Hammerspoon stopped; inspect completed work before retrying'
+            result.return_skipped = 'worker_stopped'
+            save()
+            current, self.busy = nil, false
+        end
         local function checkFocus()
             if ctx.expectedSpace and hs.spaces.focusedSpace() ~= ctx.expectedSpace then
                 result.focus_changed = true
@@ -82,7 +99,9 @@ function M.start(root, dir)
         local function publish()
             ctx.finished = true
             for _, timer in ipairs(ctx.timers) do timer:stop() end
-            result.status = result.error and (result.space_id and 'partial' or 'failed') or 'complete'
+            result.status = result.error and (result.space_id and 'partial'
+                or (result.creation_attempted and 'uncertain' or 'failed')) or 'complete'
+            if result.status == 'uncertain' then result.uncertain = true end
             save()
             self.busy = false
             current = nil
@@ -267,6 +286,7 @@ function M.start(root, dir)
             result.stage = 'create'; save()
             local before = hs.spaces.allSpaces()[ctx.display]
             assert(before, 'Display disappeared')
+            result.creation_attempted = true; save()
             assert(hs.spaces.addSpaceToScreen(ctx.display))
             local added = {}
             waitFor(function()
@@ -276,12 +296,13 @@ function M.start(root, dir)
                 end
                 return #added > 0
             end, 3, function(created)
+                if not created or #added ~= 1 then result.candidate_space_ids = added end
                 assert(created and #added == 1, 'Could not identify the newly created desktop')
                 result.space_id = added[1]
                 checkFocus()
                 result.stage = 'rename'; save()
-                task('/usr/bin/python3', {os.getenv('HOME') .. '/.local/bin/doorplate',
-                     'rename', request.name, '--id', tostring(result.space_id)}, 70, function(code, out, err)
+                task('/usr/bin/python3', {root .. '/desktop.py',
+                     'rename', tostring(result.space_id), request.name, 'any'}, 80, function(code, out, err)
                     assert(code == 0, 'Naming failed: ' .. err .. out)
                     enter()
                 end)
@@ -303,29 +324,42 @@ function M.start(root, dir)
     end
 
     local function receive()
+        if self.stopped then return end
         local request = hs.json.read(dir .. '/request.json')
         if type(request) ~= 'table' or type(request.id) ~= 'string'
             or not request.id:match('^[a-f0-9]+$') or #request.id ~= 32 then return end
         if request.id == startupID then return end
         if hs.fs.attributes(dir .. '/' .. request.id .. '.json') then return end
         local function reject(message)
-            write(request.id, {id=request.id,status='failed',error=message})
+            write(request.id, {id=request.id,operation=request.operation,status='failed',error=message})
         end
         if type(request.expires) ~= 'number' or request.expires < hs.timer.secondsSinceEpoch() then
             reject('Request expired; no action taken'); return
         end
-        if request.operation == 'check' then
-            write(request.id, {id=request.id,status='ready',busy=self.busy}); return
+        local operations = {create=true,list=true,check=true,switch=true,rename=true,back=true,close=true}
+        if not operations[request.operation] then reject('Unknown operation'); return end
+        local mutation = request.operation ~= 'list' and request.operation ~= 'check'
+                         and not (request.operation == 'close' and request.execute ~= true)
+        if mutation and busy() then
+            write(request.id, {id=request.id,operation=request.operation,status='blocked',
+                  error_code='busy',error='Another desktop operation is in progress'}); return
         end
-        if request.operation ~= 'create' then reject('Unknown operation'); return end
-        if self.busy or SpacePruneBusy or (SpaceClose and SpaceClose.busy) or WinJumpWarmTimer then
-            reject('Another desktop operation is in progress'); return
+        if request.operation ~= 'create' then
+            if mutation then self.busy=true end
+            lifecycle.run(request); return
         end
         if type(request.name) ~= 'string' or request.name == '' or type(request.apps) ~= 'table'
             or #request.apps < 1 or #request.apps > 8 then reject('Invalid create request'); return end
         create(request)
     end
     self.watcher = hs.pathwatcher.new(dir, receive):start()
+    function self.stop()
+        if self.stopped then return end
+        self.stopped = true
+        self.watcher:stop()
+        if current then current.stop() end
+        lifecycle.stop()
+    end
     -- Do not replay a request left by an interrupted process or previous login.
     return self
 end

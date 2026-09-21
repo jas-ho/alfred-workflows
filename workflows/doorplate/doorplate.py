@@ -1,34 +1,22 @@
 #!/usr/bin/python3
-"""Alfred and CLI search/rename for Doorplate. Native bridge uses live Space IDs."""
+"""Alfred desktop pickers; mutations use the shared workspace operation bridge."""
 
 from __future__ import annotations
 
-import argparse
-import base64
-import fcntl
 import json
-import os
 import subprocess
 import sys
-import uuid
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+# The New Workspace installation owns the CLI and native implementation.
+WORKSPACE_ROOT = Path.home() / ".local/share/workspace"
+if not WORKSPACE_ROOT.is_dir():
+    WORKSPACE_ROOT = Path(__file__).resolve().parents[1] / "new-workspace"
+sys.path.insert(0, str(WORKSPACE_ROOT))
+import desktop
+import workspace
 
-
-def native(*args: str) -> dict:
-    result = subprocess.run(
-        ["/usr/bin/osascript", "-l", "JavaScript", str(ROOT / "native.js"), *args],
-        capture_output=True,
-        text=True,
-        timeout=60 if args[0] == "rename" else 15,
-    )
-    if result.returncode:
-        raise RuntimeError(result.stderr.strip() or "Doorplate helper failed.")
-    payload = json.loads(result.stdout)
-    if "error" in payload:
-        raise RuntimeError(payload["error"])
-    return payload
+native = desktop.native
 
 
 def error_item(message: str) -> dict:
@@ -127,103 +115,25 @@ def filter_main(mode: str, query: str) -> None:
     print(json.dumps({"items": items}, ensure_ascii=False))
 
 
-def data_dir() -> Path:
-    path = Path(
-        os.environ.get("alfred_workflow_data")
-        or (
-            Path.home()
-            / "Library/Application Support/Alfred/Workflow Data/com.jason.doorplate"
-        )
-    )
-    path.mkdir(parents=True, exist_ok=True)
-    return path
-
-
 def perform_action(payload: dict) -> str:
     action = payload["action"]
-    if action == "back":
-        url = "doorplate://back"
-    elif action == "close":
-        state = native("snapshot")
-        close_target = resolve_target(state, None, payload["id"])
-        label = close_target["name"] or f"Desktop {close_target['number']}"
-        # Base64 keeps the user-provided name out of Lua syntax entirely.
-        encoded = base64.b64encode(label.encode()).decode("ascii")
-        space_id = int(close_target["id"])
-        if space_id <= 0:
-            raise RuntimeError("Invalid desktop ID.")
-        script = (
-            "return hs.json.encode(SpaceClose and SpaceClose.request("
-            f'{space_id}, hs.base64.decode("{encoded}")) '
-            'or {error="Desktop closing is not loaded in Hammerspoon. Reload its configuration."})'
-        )
-        result = subprocess.run(
-            [str(Path.home() / ".local/bin/hs"), "-q", "-t", "3", "-c", script],
-            stdin=subprocess.DEVNULL,
-            capture_output=True,
-            text=True,
-            timeout=8,
-        )
-        if result.returncode:
-            raise RuntimeError(result.stderr.strip() or "Could not reach Hammerspoon.")
-        response = json.loads(result.stdout)
-        if response.get("error"):
-            raise RuntimeError(response["error"])
-        if response.get("status") != "close_requested":
-            raise RuntimeError("Hammerspoon did not acknowledge the close request.")
-        return ""
-    elif action == "switch":
-        # Resolve the stable ID again: desktop order may have changed since filtering.
-        state = native("snapshot")
-        target = next((s for s in state["desktops"] if s["id"] == payload["id"]), None)
-        if target is None:
-            raise RuntimeError("That desktop no longer exists. Search again.")
-        url = f"doorplate://switch/{target['number']}"
-    elif action == "rename":
-        name = payload["name"].strip()
-        if not name:
-            raise RuntimeError("Enter a desktop name.")
-        directory = data_dir()
-        # Serialize writers: each rename briefly stops and restarts Doorplate.
-        with (directory / "rename.lock").open("a") as lock:
-            try:
-                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except BlockingIOError:
-                raise RuntimeError(
-                    "A rename is already in progress. Try again."
-                ) from None
-            backup = directory / f"names-before-rename-{uuid.uuid4().hex}.json"
-            try:
-                native(
-                    "rename",
-                    payload["id"],
-                    name,
-                    str(backup),
-                    "current" if payload.get("require_active", True) else "any",
-                )
-            except (RuntimeError, OSError, ValueError, subprocess.SubprocessError):
-                # A killed/hung osascript cannot execute its own finally block.
-                # Best effort recovery, without taking focus or masking the error.
-                try:
-                    subprocess.run(
-                        ["/usr/bin/open", "-g", "-j", "-b", "app.doorplate.Doorplate"],
-                        capture_output=True,
-                        timeout=10,
-                    )
-                except (OSError, subprocess.SubprocessError):
-                    pass
-                raise
-        return f"Desktop renamed to {name}"
-    else:
-        raise RuntimeError("Unknown Doorplate action.")
-    subprocess.run(
-        ["/usr/bin/open", "-g", url],
-        check=True,
-        capture_output=True,
-        text=True,
-        timeout=5,
-    )
-    return ""
+    if action not in ("switch", "rename", "close", "back"):
+        raise ValueError("Unknown desktop action")
+    request = {"operation": action}
+    if action != "back":
+        request["space_id"] = desktop.valid_id(payload["id"])
+    if action == "rename":
+        request["name"] = payload["name"]
+    if action == "close":
+        request.update(execute=True, confirm=True, notify=True)
+    result = workspace.envelope(workspace.send(request), action)
+    if result["status"] not in ("complete", "cancelled"):
+        error = result.get("error")
+        message = error["message"] if error else "Desktop operation did not complete"
+        if result.get("operation_id"):
+            message += " (workspace result " + result["operation_id"] + ")"
+        raise RuntimeError(message)
+    return "Desktop renamed to " + payload["name"] if action == "rename" else ""
 
 
 def action_main(raw: str) -> None:
@@ -233,114 +143,10 @@ def action_main(raw: str) -> None:
         RuntimeError,
         OSError,
         ValueError,
+        TypeError,
         KeyError,
         subprocess.SubprocessError,
     ) as error:
-        message = f"Doorplate: {error}"
-    # Alfred's notification object displays nonempty output, including failures.
+        message = f"Workspace: {error}"
     if message:
         print(message)
-
-
-def resolve_target(state: dict, query: str | None, space_id: str | None) -> dict:
-    spaces = state["desktops"]
-    if space_id is not None:
-        matches = [s for s in spaces if s["id"] == space_id]
-    else:
-        query = (query or "").strip().casefold()
-        exact = [
-            s
-            for s in spaces
-            if s["name"].casefold() == query or str(s["number"]) == query
-        ]
-        matches = exact or [s for s in spaces if query in s["name"].casefold()]
-    if not matches:
-        raise RuntimeError("No matching desktop. Run doorplate list.")
-    if len(matches) != 1:
-        raise RuntimeError("Multiple desktops match. Use --id from doorplate list.")
-    return matches[0]
-
-
-def cli_main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Control Doorplate from a graphical macOS login session. Outputs JSON."
-    )
-    commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser(
-        "list", help="List live desktops, stable IDs, names, and the active Space ID"
-    )
-    switch = commands.add_parser(
-        "switch", help="Switch by unique name, number, or stable ID"
-    )
-    switch.add_argument("query", nargs="?")
-    switch.add_argument("--id", dest="space_id")
-    close = commands.add_parser(
-        "close",
-        help="Close a desktop; asks for confirmation if it contains windows",
-    )
-    close.add_argument("query", nargs="?")
-    close.add_argument("--id", dest="space_id")
-    rename = commands.add_parser(
-        "rename", help="Name the current desktop, or an explicit --id without switching"
-    )
-    rename.add_argument("name")
-    rename.add_argument("--id", dest="space_id")
-    commands.add_parser("back", help="Return to Doorplate’s previous desktop")
-    args = parser.parse_args(argv)
-    try:
-        if args.command == "list":
-            output = native("snapshot")
-        else:
-            payload = {"action": args.command}
-            if args.command == "close":
-                if args.query and args.space_id:
-                    raise RuntimeError(
-                        "Specify either a name/number or --id, not both."
-                    )
-                state = native("snapshot")
-                target = resolve_target(
-                    state,
-                    args.query,
-                    args.space_id or (state["active"] if not args.query else None),
-                )
-                payload["id"] = target["id"]
-            elif args.command == "switch":
-                if bool(args.query) == bool(args.space_id):
-                    raise RuntimeError(
-                        "Specify either a name/number or --id, not both."
-                    )
-                payload["id"] = resolve_target(
-                    native("snapshot"), args.query, args.space_id
-                )["id"]
-            elif args.command == "rename":
-                state = native("snapshot")
-                target = resolve_target(state, None, args.space_id or state["active"])
-                payload.update(
-                    id=target["id"],
-                    name=args.name,
-                    require_active=args.space_id is None,
-                )
-            message = perform_action(payload)
-            output = {"ok": True, **payload}
-            if args.command == "close":
-                output["status"] = "close_requested"
-            if message:
-                output["message"] = message
-        print(json.dumps(output, ensure_ascii=False))
-        return 0
-    except (
-        RuntimeError,
-        OSError,
-        ValueError,
-        KeyError,
-        subprocess.SubprocessError,
-    ) as error:
-        print(
-            json.dumps({"ok": False, "error": str(error)}, ensure_ascii=False),
-            file=sys.stderr,
-        )
-        return 1
-
-
-if __name__ == "__main__":
-    raise SystemExit(cli_main())

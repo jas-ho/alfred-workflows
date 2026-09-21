@@ -41,7 +41,7 @@ hs={
  json={read=function(p)return files[p]end,decode=function(x)if x=='{}' then return {} end;return x end,encode=function(x)return x end,
   write=function(x,p)files[p]=x;return true end},
  fs={attributes=function(p)return files[p]~=nil end},
- pathwatcher={new=function(_,fn)receive=fn;return {start=function(s)return s end}end},
+ pathwatcher={new=function(_,fn)receive=fn;return {start=function(s)return s end,stop=function()end}end},
  timer={doAfter=later,secondsSinceEpoch=function()return now end},
  application={get=app},
  window={focusedWindow=function()return originalWindow end},
@@ -103,7 +103,7 @@ def runtime():
     lua = LuaRuntime(unpack_returned_tuples=True)
     lua.execute(FIXTURE)
     module = lua.execute(MODULE.read_text())
-    worker = module.start("root", "state")
+    worker = module.start(str(MODULE.parent), "state")
     return lua, worker
 
 
@@ -196,7 +196,7 @@ def test_startup_request_is_never_replayed_on_another_filesystem_event():
         "files['state/request.json']={id=string.rep('a',32),expires=5,operation='check'}"
     )
     module = lua.execute(MODULE.read_text())
-    module.start("root", "state")
+    module.start(str(MODULE.parent), "state")
     lua.globals().receive()
     assert lua.globals().files["state/" + "a" * 32 + ".json"] is None
 

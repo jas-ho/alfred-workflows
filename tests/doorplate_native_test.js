@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
-const source = fs.readFileSync(path.join(__dirname, '../workflows/doorplate/native.js'), 'utf8');
+const source = fs.readFileSync(path.join(__dirname, '../workflows/new-workspace/desktop_native.js'), 'utf8');
 
 function setup(options = {}) {
     const original = {'5': {name: 'Old', icon: '🪟', color: 3, seconds: 42, future: {keep: true}},

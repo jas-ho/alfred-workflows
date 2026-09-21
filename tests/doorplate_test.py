@@ -70,32 +70,12 @@ def test_empty_name_and_fullscreen_are_not_actionable(state):
     assert not dp.rename_items(state, "Research")[0]["valid"]
 
 
-def test_switch_resolves_id_after_desktop_reorder(state, monkeypatch):
-    state["desktops"][0]["number"] = 3
-    monkeypatch.setattr(dp, "native", lambda *args: state)
-    calls = []
-    monkeypatch.setattr(dp.subprocess, "run", lambda args, **kwargs: calls.append(args))
-    assert dp.perform_action({"action": "switch", "id": "5"}) == ""
-    assert calls == [["/usr/bin/open", "-g", "doorplate://switch/3"]]
-
-
-def test_switch_deleted_desktop_does_not_open_url(state, monkeypatch):
-    monkeypatch.setattr(dp, "native", lambda *args: state)
-    monkeypatch.setattr(
-        dp.subprocess,
-        "run",
-        lambda *args, **kwargs: pytest.fail("Unexpected URL launch"),
-    )
-    with pytest.raises(RuntimeError, match="no longer exists"):
-        dp.perform_action({"action": "switch", "id": "deleted"})
-
-
 def test_rename_arguments_are_separate_and_backup_is_local(tmp_path, monkeypatch):
-    monkeypatch.setattr(dp, "data_dir", lambda: tmp_path)
+    monkeypatch.setattr(dp.desktop, "data_dir", lambda: tmp_path)
     calls = []
-    monkeypatch.setattr(dp, "native", lambda *args: calls.append(args))
+    monkeypatch.setattr(dp.desktop, "native", lambda *args: calls.append(args))
     name = '"; $(literal) 🪟'
-    dp.perform_action({"action": "rename", "id": "5", "name": name})
+    dp.desktop.rename("5", name, True)
     assert len(calls) == 1
     assert calls[0][:3] == ("rename", "5", name)
     assert Path(calls[0][3]).parent == tmp_path
@@ -104,12 +84,16 @@ def test_rename_arguments_are_separate_and_backup_is_local(tmp_path, monkeypatch
 
 
 def test_concurrent_rename_refused(tmp_path, monkeypatch):
-    monkeypatch.setattr(dp, "data_dir", lambda: tmp_path)
-    monkeypatch.setattr(dp, "native", lambda *args: pytest.fail("Unexpected rename"))
+    monkeypatch.setattr(dp.desktop, "data_dir", lambda: tmp_path)
+    monkeypatch.setattr(
+        dp.desktop, "native", lambda *args: pytest.fail("Unexpected rename")
+    )
     with (tmp_path / "rename.lock").open("a") as lock:
-        dp.fcntl.flock(lock, dp.fcntl.LOCK_EX | dp.fcntl.LOCK_NB)
+        dp.desktop.fcntl.flock(
+            lock, dp.desktop.fcntl.LOCK_EX | dp.desktop.fcntl.LOCK_NB
+        )
         with pytest.raises(RuntimeError, match="already in progress"):
-            dp.perform_action({"action": "rename", "id": "5", "name": "Research"})
+            dp.desktop.rename("5", "Research", True)
 
 
 def test_native_error_is_shown_in_filter(monkeypatch, capsys):
@@ -128,63 +112,26 @@ def test_native_bridge_rename_safety_contract():
     result = subprocess.run(
         ["node", str(ROOT / "tests/doorplate_native_test.js")],
         capture_output=True,
+        check=False,
         text=True,
     )
     assert result.returncode == 0, result.stdout + result.stderr
 
 
 def test_timed_out_rename_attempts_background_relaunch(tmp_path, monkeypatch):
-    monkeypatch.setattr(dp, "data_dir", lambda: tmp_path)
+    monkeypatch.setattr(dp.desktop, "data_dir", lambda: tmp_path)
 
     def timeout(*args):
         raise subprocess.TimeoutExpired("osascript", 60)
 
-    monkeypatch.setattr(dp, "native", timeout)
+    monkeypatch.setattr(dp.desktop, "native", timeout)
     launches = []
     monkeypatch.setattr(
         dp.subprocess, "run", lambda args, **kwargs: launches.append(args)
     )
     with pytest.raises(subprocess.TimeoutExpired):
-        dp.perform_action({"action": "rename", "id": "5", "name": "Research"})
+        dp.desktop.rename("5", "Research", True)
     assert launches == [["/usr/bin/open", "-g", "-j", "-b", "app.doorplate.Doorplate"]]
-
-
-def test_cli_list_json(state, monkeypatch, capsys):
-    monkeypatch.setattr(dp, "native", lambda *args: state)
-    assert dp.cli_main(["list"]) == 0
-    assert json.loads(capsys.readouterr().out) == state
-
-
-def test_cli_rename_explicit_id_does_not_require_current_space(
-    state, monkeypatch, capsys
-):
-    monkeypatch.setattr(dp, "native", lambda *args: state)
-    calls = []
-    monkeypatch.setattr(
-        dp, "perform_action", lambda payload: calls.append(payload) or "Renamed"
-    )
-    assert dp.cli_main(["rename", "New Name", "--id", "3"]) == 0
-    assert calls[0] == {
-        "action": "rename",
-        "id": "3",
-        "name": "New Name",
-        "require_active": False,
-    }
-    assert json.loads(capsys.readouterr().out)["ok"] is True
-
-
-def test_cli_ambiguous_name_is_error(state, monkeypatch, capsys):
-    state["desktops"][1]["name"] = "Research"
-    monkeypatch.setattr(dp, "native", lambda *args: state)
-    assert dp.cli_main(["switch", "rese"]) == 1
-    assert "Multiple desktops" in json.loads(capsys.readouterr().err)["error"]
-
-
-def test_cli_fullscreen_cannot_rename_current(state, monkeypatch, capsys):
-    state["active"] = "1840"
-    monkeypatch.setattr(dp, "native", lambda *args: state)
-    assert dp.cli_main(["rename", "Research"]) == 1
-    assert json.loads(capsys.readouterr().err)["ok"] is False
 
 
 def test_close_picker_current_first_without_alfred_learning(state):
@@ -197,54 +144,67 @@ def test_close_picker_current_first_without_alfred_learning(state):
     assert not dp.close_items(state, "missing")[0]["valid"]
 
 
-def test_close_deleted_desktop_never_calls_backend(state, monkeypatch):
-    monkeypatch.setattr(dp, "native", lambda *args: state)
-    monkeypatch.setattr(
-        dp.subprocess, "run", lambda *a, **k: pytest.fail("Unexpected close")
-    )
-    with pytest.raises(RuntimeError, match="No matching desktop"):
-        dp.perform_action({"action": "close", "id": "deleted"})
+@pytest.mark.parametrize(
+    "query,space_id,expected",
+    [("research", None, "5"), ("2", None, "3"), (None, "2", "2"), (None, None, "5")],
+)
+def test_private_resolver_uses_stable_ids_and_explicit_numeric_order(
+    state, query, space_id, expected
+):
+    state["desktops"][0]["name"] = "Research"
+    state["desktops"][2]["name"] = "2"
+    assert dp.desktop.resolve_target(state, query, space_id)["id"] == expected
 
 
-def test_close_transports_literal_name_and_stable_id(state, monkeypatch):
-    import base64
+def test_private_resolver_rejects_ambiguity_and_fullscreen(state):
+    state["desktops"][1]["name"] = "Research too"
+    with pytest.raises(ValueError, match="Multiple"):
+        dp.desktop.resolve_target(state, "rese")
+    state["active"] = "999"
+    with pytest.raises(ValueError, match="No matching regular"):
+        dp.desktop.resolve_target(state)
 
-    name = '"; dangerous() -- Bücher'
-    state["desktops"][0]["name"] = name
-    monkeypatch.setattr(dp, "native", lambda *args: state)
+
+@pytest.mark.parametrize("sid", ["0", "-1", "2.2", "9007199254740992", "garbage"])
+def test_private_helper_rejects_unsafe_ids(sid):
+    with pytest.raises(ValueError):
+        dp.desktop.valid_id(sid)
+
+
+def test_alfred_close_uses_bridge_and_waits_for_terminal_result(monkeypatch):
     calls = []
 
-    def run(args, **kwargs):
-        calls.append((args, kwargs))
-        return subprocess.CompletedProcess(args, 0, '{"status":"close_requested"}', "")
+    def send(request):
+        calls.append(request)
+        return {
+            "id": "a" * 32,
+            "operation": "close",
+            "status": "complete",
+            "removal_verified": True,
+        }
 
-    monkeypatch.setattr(dp.subprocess, "run", run)
+    monkeypatch.setattr(dp.workspace, "send", send)
     assert dp.perform_action({"action": "close", "id": "5"}) == ""
-    args, kwargs = calls[0]
-    assert "SpaceClose.request(5," in args[-1]
-    assert name not in args[-1]
-    assert base64.b64encode(name.encode()).decode() in args[-1]
-    assert kwargs["timeout"] == 8
+    assert calls == [
+        {
+            "operation": "close",
+            "space_id": "5",
+            "execute": True,
+            "confirm": True,
+            "notify": True,
+        }
+    ]
 
 
-@pytest.mark.parametrize("response", ['{"error":"busy"}', '{"status":"closed"}'])
-def test_close_requires_backend_ack(state, monkeypatch, response):
-    monkeypatch.setattr(dp, "native", lambda *args: state)
+def test_alfred_reports_blocked_result_not_success(monkeypatch):
     monkeypatch.setattr(
-        dp.subprocess,
-        "run",
-        lambda args, **kw: subprocess.CompletedProcess(args, 0, response, ""),
+        dp.workspace,
+        "send",
+        lambda request: {
+            "id": "a" * 32,
+            "status": "blocked",
+            "error": "App needs attention",
+        },
     )
-    with pytest.raises(RuntimeError):
+    with pytest.raises(RuntimeError, match="App needs attention"):
         dp.perform_action({"action": "close", "id": "5"})
-
-
-def test_cli_close_reports_request_ack(state, monkeypatch, capsys):
-    monkeypatch.setattr(dp, "native", lambda *args: state)
-    calls = []
-    monkeypatch.setattr(
-        dp, "perform_action", lambda payload: calls.append(payload) or ""
-    )
-    assert dp.cli_main(["close"]) == 0
-    assert calls == [{"action": "close", "id": "5"}]
-    assert json.loads(capsys.readouterr().out)["status"] == "close_requested"

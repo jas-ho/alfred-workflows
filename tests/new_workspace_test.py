@@ -5,6 +5,7 @@ import json
 import plistlib
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -20,6 +21,8 @@ def load(name, filename):
 
 
 ws = load("workspace", "workspace.py")
+sys.modules["workspace"] = ws
+alfred = load("workspace_alfred", "alfred.py")
 opener = load("workspace_open_app", "open_app.py")
 
 
@@ -91,7 +94,7 @@ def test_alfred_client_failure_is_on_notification_stdout(monkeypatch, capsys):
     monkeypatch.setattr(
         ws, "send", lambda _: (_ for _ in ()).throw(RuntimeError("Worker unavailable"))
     )
-    assert ws.main(["alfred-action", "Test"]) == 1
+    assert alfred.main(["create", "Test"]) == 1
     assert capsys.readouterr().out.strip() == "Worker unavailable"
 
 
@@ -181,8 +184,10 @@ def test_transport_expiry_leaves_no_replayable_request(tmp_path, monkeypatch):
     monkeypatch.setattr(ws.time, "time", lambda: ticks[0])
     monkeypatch.setattr(ws.time, "monotonic", lambda: ticks[0])
     monkeypatch.setattr(ws.time, "sleep", lambda n: ticks.__setitem__(0, ticks[0] + n))
-    with pytest.raises(RuntimeError, match="expired"):
-        ws.send({"operation": "check"})
+    result = ws.send({"operation": "check"})
+    assert result["status"] == "uncertain"
+    assert result["id"]
+    assert result["acknowledged"] is False
     assert json.loads((tmp_path / "request.json").read_text())["expires"] < ticks[0]
 
 
@@ -239,7 +244,7 @@ def test_ghostty_failure_preserves_created_tmux_identity(monkeypatch):
     assert caught.value.session == "ws-test"
 
 
-@pytest.mark.parametrize("command", ["create", "alfred-action"])
+@pytest.mark.parametrize("command", ["create", "alfred"])
 def test_partial_creation_message_explains_kept_work_and_next_step(
     monkeypatch, capsys, command
 ):
@@ -254,12 +259,13 @@ def test_partial_creation_message_explains_kept_work_and_next_step(
     }
     monkeypatch.setattr(ws, "create_request", lambda _: {})
     monkeypatch.setattr(ws, "send", lambda _: result)
-    assert ws.main([command, "Research"]) == 1
+    run = alfred.main if command == "alfred" else ws.main
+    assert run(["create", "Research"]) == 1
     output = capsys.readouterr()
-    message = output.out if command == "alfred-action" else output.err
+    message = output.out if command == "alfred" else output.err
     assert "Edge" in message and "Research" in message and "ws-research" in message
     if command == "create":
-        assert "doorplate switch --id 123" in message
+        assert "workspace switch --id 123" in message
         assert "workspace result " + "a" * 32 in message
     else:
         assert "Use sp" in message
@@ -270,4 +276,18 @@ def test_json_failure_remains_machine_readable(monkeypatch, capsys):
     monkeypatch.setattr(ws, "create_request", lambda _: {})
     monkeypatch.setattr(ws, "send", lambda _: result)
     assert ws.main(["create", "Test", "--json"]) == 1
-    assert json.loads(capsys.readouterr().out) == result
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["status"] == "partial"
+    assert payload["data"]["space_id"] == "123"
+    assert payload["error"]["message"] == "App failed"
+
+
+def test_private_alfred_close_keeps_gui_confirmation_and_notifications(monkeypatch):
+    requests = []
+    monkeypatch.setattr(
+        ws, "send", lambda request: requests.append(request) or {"status": "complete"}
+    )
+    assert alfred.main(["close"]) == 0
+    assert requests == [
+        {"operation": "close", "execute": True, "confirm": True, "notify": True}
+    ]
