@@ -17,6 +17,31 @@ brew install jq cliclick fzf
 
 ## Workflows
 
+### [Doorplate Spaces](dist/Doorplate%20Spaces.alfredworkflow)
+
+**Keywords:** `space` (or `sp`) to search desktops by name or number; `space back` to jump back; `sn <name>` to rename the current desktop.
+
+Search results show desktop numbers and mark the current desktop. Renaming previews the target before Return and refuses to change a different desktop if you switched while Alfred was open. Fullscreen app Spaces are excluded. Names stay with their Space when reordered.
+
+Switching uses Doorplate's URL interface. Renaming briefly quits and relaunches Doorplate without activation, updates only the selected name in its private preferences, and saves a separate copy of the previous names in Alfred's workflow data directory (`names-before-rename-*.json`). Other desktop metadata and app settings are preserved. The rename format targets Doorplate 1.6.2; newer versions require rechecking before renaming is enabled. No background syncing is installed. [Backup recovery](workflows/doorplate/README.md).
+
+**Dependencies:** [Doorplate](https://doorplate.app/) installed and set up, Python 3, macOS. Doorplate needs its normal Accessibility permission; the workflow does not use UI scripting. Run from Alfred's graphical login session.
+
+The same implementation exposes a CLI for terminals and agents, with JSON output and nonzero exit status on failure:
+
+```bash
+workflows/doorplate/doorplate.py list
+workflows/doorplate/doorplate.py switch Research
+workflows/doorplate/doorplate.py switch --id 5
+workflows/doorplate/doorplate.py rename "Research"             # current desktop
+workflows/doorplate/doorplate.py rename "Research" --id 5      # explicit desktop, without switching
+workflows/doorplate/doorplate.py back
+```
+
+Use IDs from a fresh `list` result; explicit `--id` avoids dependence on the active desktop. Optionally symlink `doorplate.py` to `~/.local/bin/doorplate`. A background/SSH session without access to the WindowServer cannot list or rename live Spaces; commands fail rather than using cached desktop identities.
+
+---
+
 ### [App Launcher](dist/App%20Launcher.alfredworkflow)
 
 **Keyword:** `a`
