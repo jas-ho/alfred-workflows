@@ -12,7 +12,9 @@ WORKFLOWS = ROOT / "workflows"
 
 
 def _run(cmd):
-    proc = subprocess.run(cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    proc = subprocess.run(
+        cmd, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    )
     assert proc.returncode == 0, (
         f"Command failed: {' '.join(cmd)}\n"
         f"stdout:\n{proc.stdout}\n"
@@ -43,7 +45,12 @@ def _iter_inline_scripts():
             cfg = obj.get("config", {})
             script = cfg.get("script")
             if isinstance(script, str) and script.strip():
-                yield plist_path, obj.get("uid", "<unknown>"), int(cfg.get("type", -1)), script
+                yield (
+                    plist_path,
+                    obj.get("uid", "<unknown>"),
+                    int(cfg.get("type", -1)),
+                    script,
+                )
 
 
 def _get_edge_workspace_list_script():
@@ -83,11 +90,18 @@ def test_python_scripts_compile():
 
 
 def test_shell_scripts_parse():
-    sh_files = sorted(WORKFLOWS.glob("**/*.sh")) + [ROOT / "build.sh", ROOT / "dev-setup.sh"]
+    sh_files = sorted(WORKFLOWS.glob("**/*.sh")) + [
+        ROOT / "build.sh",
+        ROOT / "dev-setup.sh",
+    ]
     assert sh_files, "No shell scripts found"
     zsh = shutil.which("zsh")
     for path in sh_files:
-        first_line = path.read_text(encoding="utf-8", errors="replace").splitlines()[0] if path.exists() else ""
+        first_line = (
+            path.read_text(encoding="utf-8", errors="replace").splitlines()[0]
+            if path.exists()
+            else ""
+        )
         if "zsh" in first_line:
             if zsh is None:
                 print(f"Skipping zsh syntax check: {path.name} (zsh not found)")
@@ -125,7 +139,9 @@ def test_inline_scripts_parse():
             continue
         if script_type == 6:  # AppleScript
             if osacompile is None:
-                print(f"Skipping AppleScript inline syntax check: {label} (osacompile not found)")
+                print(
+                    f"Skipping AppleScript inline syntax check: {label} (osacompile not found)"
+                )
                 continue
             with tempfile.TemporaryDirectory(prefix="wf-applescript-") as tmpdir:
                 src = Path(tmpdir) / "inline.applescript"
@@ -135,7 +151,11 @@ def test_inline_scripts_parse():
             continue
         if script_type == 9:  # python
             _run_with_input(
-                [sys.executable, "-c", "import sys; compile(sys.stdin.read(), '<inline>', 'exec')"],
+                [
+                    sys.executable,
+                    "-c",
+                    "import sys; compile(sys.stdin.read(), '<inline>', 'exec')",
+                ],
                 script,
             )
             continue
@@ -162,7 +182,9 @@ def test_edge_workspace_v2_fallback_when_v1_cache_is_invalid():
 
     script = _get_edge_workspace_list_script()
     with tempfile.TemporaryDirectory(prefix="edge-home-") as tmp_home:
-        edge_default = Path(tmp_home) / "Library/Application Support/Microsoft Edge/Default"
+        edge_default = (
+            Path(tmp_home) / "Library/Application Support/Microsoft Edge/Default"
+        )
         workspaces_dir = edge_default / "Workspaces"
         workspaces_dir.mkdir(parents=True, exist_ok=True)
 
@@ -176,7 +198,11 @@ def test_edge_workspace_v2_fallback_when_v1_cache_is_invalid():
                     "roots": {
                         "workspaces_v2": {
                             "children": [
-                                {"type": "folder", "name": "Fallback Workspace", "guid": "ws-guid-1"},
+                                {
+                                    "type": "folder",
+                                    "name": "Fallback Workspace",
+                                    "guid": "ws-guid-1",
+                                },
                                 {"type": "url", "name": "Ignore Me"},
                             ]
                         }
@@ -195,15 +221,15 @@ def test_edge_workspace_v2_fallback_when_v1_cache_is_invalid():
             stderr=subprocess.PIPE,
             env=env,
         )
-        assert proc.returncode == 0, (
-            f"Edge script failed\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
-        )
+        assert (
+            proc.returncode == 0
+        ), f"Edge script failed\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
         payload = json.loads(proc.stdout)
         items = payload.get("items", [])
         assert any(item.get("title") == "Fallback Workspace" for item in items), payload
 
 
-def test_edge_workspace_v1_query_filtering():
+def test_edge_workspace_returns_all_for_alfred_word_matching():
     jq = shutil.which("jq")
     if jq is None:
         print("Skipping Edge query filtering test: jq not found")
@@ -211,7 +237,9 @@ def test_edge_workspace_v1_query_filtering():
 
     script = _get_edge_workspace_list_script()
     with tempfile.TemporaryDirectory(prefix="edge-home-") as tmp_home:
-        edge_default = Path(tmp_home) / "Library/Application Support/Microsoft Edge/Default"
+        edge_default = (
+            Path(tmp_home) / "Library/Application Support/Microsoft Edge/Default"
+        )
         workspaces_dir = edge_default / "Workspaces"
         workspaces_dir.mkdir(parents=True, exist_ok=True)
 
@@ -238,9 +266,13 @@ def test_edge_workspace_v1_query_filtering():
             stderr=subprocess.PIPE,
             env=env,
         )
-        assert proc.returncode == 0, (
-            f"Edge script failed\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
-        )
+        assert (
+            proc.returncode == 0
+        ), f"Edge script failed\nstdout:\n{proc.stdout}\nstderr:\n{proc.stderr}"
         payload = json.loads(proc.stdout)
         items = payload.get("items", [])
-        assert [item.get("title") for item in items] == ["Alpha Workspace", "Alphabet Soup"], payload
+        assert [item.get("title") for item in items] == [
+            "Alpha Workspace",
+            "Beta Space",
+            "Alphabet Soup",
+        ], payload

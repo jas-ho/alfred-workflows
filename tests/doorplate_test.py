@@ -216,9 +216,7 @@ def test_close_transports_literal_name_and_stable_id(state, monkeypatch):
 
     def run(args, **kwargs):
         calls.append((args, kwargs))
-        return subprocess.CompletedProcess(
-            args, 0, '{"status":"preview_requested"}', ""
-        )
+        return subprocess.CompletedProcess(args, 0, '{"status":"close_requested"}', "")
 
     monkeypatch.setattr(dp.subprocess, "run", run)
     assert dp.perform_action({"action": "close", "id": "5"}) == ""
@@ -230,7 +228,7 @@ def test_close_transports_literal_name_and_stable_id(state, monkeypatch):
 
 
 @pytest.mark.parametrize("response", ['{"error":"busy"}', '{"status":"closed"}'])
-def test_close_requires_backend_preview_ack(state, monkeypatch, response):
+def test_close_requires_backend_ack(state, monkeypatch, response):
     monkeypatch.setattr(dp, "native", lambda *args: state)
     monkeypatch.setattr(
         dp.subprocess,
@@ -241,7 +239,7 @@ def test_close_requires_backend_preview_ack(state, monkeypatch, response):
         dp.perform_action({"action": "close", "id": "5"})
 
 
-def test_cli_close_reports_pending_confirmation(state, monkeypatch, capsys):
+def test_cli_close_reports_request_ack(state, monkeypatch, capsys):
     monkeypatch.setattr(dp, "native", lambda *args: state)
     calls = []
     monkeypatch.setattr(
@@ -249,4 +247,4 @@ def test_cli_close_reports_pending_confirmation(state, monkeypatch, capsys):
     )
     assert dp.cli_main(["close"]) == 0
     assert calls == [{"action": "close", "id": "5"}]
-    assert json.loads(capsys.readouterr().out)["status"] == "preview_requested"
+    assert json.loads(capsys.readouterr().out)["status"] == "close_requested"

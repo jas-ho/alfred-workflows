@@ -3,11 +3,24 @@
 
 import json
 import os
+import re
 import subprocess
 import tempfile
 import time
 
 CACHE_TTL = 5  # seconds
+
+
+def match_terms(name):
+    """Keep full-name matching and add compact names and multiword initials."""
+    words = re.sub(r"([a-z])([A-Z])", r"\1 \2", name).split()
+    terms = [name, " ".join(words)]
+    if len(words) > 1:
+        terms.extend(["".join(words), "".join(word[0] for word in words)])
+    if name.casefold().startswith("visual studio code"):
+        terms.append("vscode vs code")
+    return " ".join(dict.fromkeys(terms))
+
 
 cache_dir = os.environ.get("alfred_workflow_cache", "/tmp/app-launcher-cache")
 os.makedirs(cache_dir, exist_ok=True)
@@ -31,10 +44,14 @@ apps = subprocess.check_output(
 
 # Only include apps from standard locations (skip internal helpers/agents)
 # Priority order: prefer /Applications over ~/Applications for same-name apps
-APP_DIRS = ("/Applications", "/System/Applications", os.path.expanduser("~/Applications"))
-apps = [p for p in apps
-        if any(p.startswith(d) for d in APP_DIRS)
-        and "/Contents/" not in p]
+APP_DIRS = (
+    "/Applications",
+    "/System/Applications",
+    os.path.expanduser("~/Applications"),
+)
+apps = [
+    p for p in apps if any(p.startswith(d) for d in APP_DIRS) and "/Contents/" not in p
+]
 
 # Deduplicate by app name, preferring paths earlier in APP_DIRS
 seen = {}
@@ -56,14 +73,17 @@ apps = list(seen.values())
 items = []
 for path in sorted(apps, key=lambda p: os.path.basename(p).lower()):
     name = os.path.basename(path).removesuffix(".app")
-    items.append({
-        "title": name,
-        "subtitle": path,
-        "arg": path,
-        "autocomplete": name,
-        "icon": {"type": "fileicon", "path": path},
-        "match": name,
-    })
+    items.append(
+        {
+            "uid": path,
+            "title": name,
+            "subtitle": "↵ Open or activate app",
+            "arg": path,
+            "autocomplete": name,
+            "icon": {"type": "fileicon", "path": path},
+            "match": match_terms(name),
+        }
+    )
 
 result = json.dumps({"items": items})
 

@@ -79,8 +79,7 @@ if [[ -f "$CACHE" ]]; then
     jq --arg q "$QUERY" '
       [
         .workspaces[]?
-        | select((.name // "" | ascii_downcase) | contains($q))
-        | {uid: .id, title: .name, arg: .id}
+        | {uid: .id, title: .name, arg: .id, subtitle: "↵ Open workspace in Edge"}
       ]
     ' "$CACHE" 2&gt;/dev/null
   )"; then
@@ -97,12 +96,11 @@ if [[ "$ITEMS" == '[]' ]] &amp;&amp; [[ -f "$BOOKMARKS" ]]; then
       [
         .roots.workspaces_v2.children[]?
         | select(.type == "folder")
-        | select((.name // "" | ascii_downcase) | contains($q))
         | {
             uid: (.guid // .id // .name),
             title: .name,
             arg: (.guid // .id // .name),
-            subtitle: "Workspace V2 source (Bookmarks)"
+            subtitle: "↵ Open workspace in Edge"
           }
       ]
     ' "$BOOKMARKS" 2&gt;/dev/null
@@ -125,7 +123,7 @@ jq -n --argjson items "$ITEMS" '
       items: [
         {
           title: "No Edge workspaces found",
-          subtitle: "Open/create a workspace in Edge. V2 is read from Bookmarks.",
+          subtitle: "Create a workspace in Edge, then search again.",
           valid: false
         }
       ]
@@ -138,7 +136,7 @@ jq -n --argjson items "$ITEMS" '
 				<key>scriptfile</key>
 				<string></string>
 				<key>subtext</key>
-				<string></string>
+				<string>Choose an Edge workspace · ew + Space to browse</string>
 				<key>title</key>
 				<string>Find Edge workspaces</string>
 				<key>type</key>
@@ -184,16 +182,16 @@ jq -n --argjson items "$ITEMS" '
 		<key>5139E42B-C567-4810-AC0A-0BDD717716C2</key>
 		<dict>
 			<key>xpos</key>
-			<real>260</real>
+			<real>260.0</real>
 			<key>ypos</key>
-			<real>150</real>
+			<real>150.0</real>
 		</dict>
 		<key>C602E38A-3489-4197-8B7C-EC76F0DCE17A</key>
 		<dict>
 			<key>xpos</key>
-			<real>420</real>
+			<real>420.0</real>
 			<key>ypos</key>
-			<real>150</real>
+			<real>150.0</real>
 		</dict>
 	</dict>
 	<key>userconfigurationconfig</key>

@@ -107,7 +107,7 @@ def close_items(state: dict, query: str) -> list[dict]:
             {
                 "title": f"Close {space['number']} · {label}…",
                 "subtitle": current
-                + "Review its windows before closing them and removing this desktop",
+                + "Empty desktops close immediately; otherwise review windows",
                 "icon": {"path": "DP-CLOSE.png"},
                 "arg": action_arg("close", id=space["id"]),
                 "valid": True,
@@ -169,8 +169,8 @@ def perform_action(payload: dict) -> str:
         response = json.loads(result.stdout)
         if response.get("error"):
             raise RuntimeError(response["error"])
-        if response.get("status") != "preview_requested":
-            raise RuntimeError("Hammerspoon did not acknowledge the preview request.")
+        if response.get("status") != "close_requested":
+            raise RuntimeError("Hammerspoon did not acknowledge the close request.")
         return ""
     elif action == "switch":
         # Resolve the stable ID again: desktop order may have changed since filtering.
@@ -276,7 +276,7 @@ def cli_main(argv: list[str] | None = None) -> int:
     switch.add_argument("--id", dest="space_id")
     close = commands.add_parser(
         "close",
-        help="Preview closing a desktop and its windows; requires GUI confirmation",
+        help="Close a desktop; asks for confirmation if it contains windows",
     )
     close.add_argument("query", nargs="?")
     close.add_argument("--id", dest="space_id")
@@ -323,7 +323,7 @@ def cli_main(argv: list[str] | None = None) -> int:
             message = perform_action(payload)
             output = {"ok": True, **payload}
             if args.command == "close":
-                output["status"] = "preview_requested"
+                output["status"] = "close_requested"
             if message:
                 output["message"] = message
         print(json.dumps(output, ensure_ascii=False))

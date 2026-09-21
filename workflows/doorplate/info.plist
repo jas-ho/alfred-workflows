@@ -247,7 +247,7 @@
 				<key>scriptfile</key>
 				<string>./close.py</string>
 				<key>subtext</key>
-				<string>Choose a desktop; review its windows before closing</string>
+				<string>Empty desktops close immediately; otherwise review windows</string>
 				<key>title</key>
 				<string>Close desktop and its windows…</string>
 				<key>type</key>

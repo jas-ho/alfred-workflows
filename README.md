@@ -17,6 +17,10 @@ brew install jq cliclick fzf
 
 ## Workflows
 
+### [Restart App](dist/Restart%20App.alfredworkflow)
+
+**Keywords:** `ra` (also `rr`, `restart`, `relaunch`); add Space to enter the app list without normal Alfred results. Lists running apps with their own icons, multiword matching, compact names, and initials. Return requests a normal quit and reopens the app after it exits. Option+Return quits only; Command+Return hides an app; `rexclude` edits the hidden-app list. Save prompts and cancelled quits are not overridden. Matching uses app name; actions retain the selected path, process ID, and launch time. Finder, Alfred, and nested helper apps are excluded. macOS graphical login session required. [Details](workflows/restart-app/README.md).
+
 ### [Doorplate Spaces](dist/Doorplate%20Spaces.alfredworkflow)
 
 **Keywords:** `space` (or `sp`) to search desktops by name or number; `space back` to jump back; `sn <name>` to rename the current desktop.
@@ -25,7 +29,7 @@ Search results show desktop numbers and mark the current desktop. Renaming previ
 
 Switching uses Doorplate's URL interface. Renaming briefly quits and relaunches Doorplate without activation, updates the selected name in its private preferences, and changes Automatic color to Transparent while preserving explicit color choices. New desktops receive this appearance when named through `sn` or the CLI; it is saved across reboots. A separate copy of the previous metadata is saved in Alfred's workflow data directory (`names-before-rename-*.json`). Other desktop metadata and app settings are preserved. The rename format targets Doorplate 1.6.2; newer versions require rechecking before renaming is enabled. No background syncing is installed. [Backup recovery](workflows/doorplate/README.md).
 
-`cs [name or number]` previews closing a desktop and its windows, with the current desktop first. It preserves shared windows and tmux sessions, stops on save prompts or changed desktop contents, and removes the desktop only after verifying closure. Requires the separate Hammerspoon backend in `~/bin/hammerspoon/space-close.lua`; see [setup and behavior](workflows/doorplate/README.md#close-a-desktop). CLI: `doorplate close --id ID` (requires GUI confirmation).
+`cs [name or number]` closes desktops, with the current desktop listed first. Empty desktops close immediately; desktops with windows get one confirmation where you are. It preserves shared windows, stops on save prompts or changed contents, and verifies removal. Closing the active desktop returns via `space back`, with a neighbor fallback. Requires the separate Hammerspoon backend in `~/bin/hammerspoon/space-close.lua`; see [setup and behavior](workflows/doorplate/README.md#close-a-desktop). CLI: `doorplate close --id ID` (GUI confirmation when windows need closing).
 
 **Dependencies:** [Doorplate](https://doorplate.app/) installed and set up, Python 3, macOS. Doorplate needs its normal Accessibility permission. Closing desktops additionally uses Hammerspoon Accessibility and Mission Control automation. Run from Alfred's graphical login session.
 
@@ -48,7 +52,7 @@ Use IDs from a fresh `list` result; explicit `--id` avoids dependence on the act
 
 **Keyword:** `a`
 
-Launch applications using Spotlight (mdfind) instead of Alfred's native file cache. Workaround for when Alfred's filecache doesn't index all apps. Lists all .app bundles from /Applications, /System/Applications, and ~/Applications with client-side filtering, deduplication, and a short-lived cache for instant keystroke response. Focuses already-running apps rather than opening new windows.
+Launch applications using Spotlight (mdfind) instead of Alfred's native file cache. Workaround for when Alfred's filecache doesn't index all apps. Lists all .app bundles from /Applications, /System/Applications, and ~/Applications with client-side filtering, deduplication, and a short-lived cache for instant keystroke response. Focuses already-running apps rather than opening new windows. Matches words in any order, compact names, and initials, consistently with Open New Window.
 
 **Dependencies:** Python 3
 
@@ -85,7 +89,7 @@ Matches on slug, split slug segments, title words, and category — type `gen` t
 
 **Keyword:** `ew`
 
-Quickly switch between Microsoft Edge workspaces. Lists workspaces from Edge data files and lets you filter/select one to switch to.
+Quickly switch between Microsoft Edge workspaces. Lists workspaces from Edge data files and lets you filter/select one to switch to. Alfred handles word matching in any order; `ew` followed by Space enters the workspace list.
 
 **Known issue (Edge 146+ / Workspace V2):** Listing works, but opening/switching is currently broken.  
 Track status in [Issue #4](https://github.com/jas-ho/alfred-workflows/issues/4).
@@ -138,6 +142,8 @@ Workaround for the [macOS focus stealing bug](https://hynek.me/til/macos-window-
 **Keyword:** `wm`
 
 Control Moom window management actions from Alfred. Lists all available Moom actions (window positions, layouts, display moves) and executes the selected one. To make this useful you'll need to configure Moom with your preferred window arrangements and give them names that are easy to fuzzy-search. For example: "Left & Right" for sending window 1 to left half and window 2 to right half; "Sidecar" for sending window 1 to left 2/3 and window 2 to left 1/3; "Monitor to left" for sending window to monitor to the left if existing; etc.
+
+Position previews show halves, thirds, two-thirds, quarters, saved layouts, maximize, fullscreen, grid, and display moves. Unknown custom actions use a neutral fallback. The built-in Center Window entry invokes Moom’s center command directly.
 
 **Dependencies:** [Moom](https://manytricks.com/moom/)
 
