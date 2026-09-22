@@ -60,11 +60,87 @@
 				<false/>
 			</dict>
 		</array>
+		<key>WS-ROOT</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>WS-ROUTE</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<true/>
+			</dict>
+		</array>
+		<key>WS-MENU</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>WS-ROUTE</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<true/>
+			</dict>
+		</array>
+		<key>WS-ROUTE</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>WS-ROOT</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>sourceoutputuid</key>
+				<string>WS-TO-ROOT</string>
+				<key>vitoclose</key>
+				<true/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>WS-ACTION</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>sourceoutputuid</key>
+				<string>WS-TO-ACTION</string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+			<dict>
+				<key>destinationuid</key>
+				<string>WS-MENU</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<true/>
+			</dict>
+		</array>
+		<key>WS-ACTION</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>DP-NOTIFY</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
 	</dict>
 	<key>createdby</key>
 	<string>Jason Hoelscher-Obermaier</string>
 	<key>description</key>
-	<string>Find, switch, and name macOS desktops with Doorplate.</string>
+	<string>Browse, switch, name, create and close macOS workspaces.</string>
 	<key>disabled</key>
 	<false/>
 	<key>name</key>
@@ -262,9 +338,177 @@
 			<key>version</key>
 			<integer>3</integer>
 		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>2</integer>
+				<key>argumenttreatemptyqueryasnil</key>
+				<false/>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>68</integer>
+				<key>keyword</key>
+				<string>ws||workspace</string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyinitially</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Reading desktops…</string>
+				<key>script</key>
+				<string></string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string>./palette-root.py</string>
+				<key>subtext</key>
+				<string>Browse desktops and workspace actions</string>
+				<key>title</key>
+				<string>Workspace palette</string>
+				<key>type</key>
+				<integer>8</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>WS-ROOT</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>alfredfiltersresults</key>
+				<false/>
+				<key>alfredfiltersresultsmatchmode</key>
+				<integer>2</integer>
+				<key>argumenttreatemptyqueryasnil</key>
+				<false/>
+				<key>argumenttrimmode</key>
+				<integer>0</integer>
+				<key>argumenttype</key>
+				<integer>1</integer>
+				<key>escaping</key>
+				<integer>68</integer>
+				<key>keyword</key>
+				<string></string>
+				<key>queuedelaycustom</key>
+				<integer>3</integer>
+				<key>queuedelayimmediatelyinitially</key>
+				<true/>
+				<key>queuedelaymode</key>
+				<integer>0</integer>
+				<key>queuemode</key>
+				<integer>1</integer>
+				<key>runningsubtext</key>
+				<string>Reading desktops…</string>
+				<key>script</key>
+				<string></string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string>./palette.py</string>
+				<key>subtext</key>
+				<string>Browse desktops and workspace actions</string>
+				<key>title</key>
+				<string>Workspace palette</string>
+				<key>type</key>
+				<integer>8</integer>
+				<key>withspace</key>
+				<true/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.input.scriptfilter</string>
+			<key>uid</key>
+			<string>WS-MENU</string>
+			<key>version</key>
+			<integer>3</integer>
+		</dict>
+		<dict>
+			<key>uid</key>
+			<string>WS-ROUTE</string>
+			<key>type</key>
+			<string>alfred.workflow.utility.conditional</string>
+			<key>version</key>
+			<integer>1</integer>
+			<key>config</key>
+			<dict>
+				<key>conditions</key>
+				<array>
+					<dict>
+						<key>inputstring</key>
+						<string>{var:ws_screen}</string>
+						<key>matchcasesensitive</key>
+						<true/>
+						<key>matchmode</key>
+						<integer>0</integer>
+						<key>matchstring</key>
+						<string>root</string>
+						<key>outputlabel</key>
+						<string>Workspaces</string>
+						<key>uid</key>
+						<string>WS-TO-ROOT</string>
+					</dict>
+					<dict>
+						<key>inputstring</key>
+						<string>{var:ws_screen}</string>
+						<key>matchcasesensitive</key>
+						<true/>
+						<key>matchmode</key>
+						<integer>0</integer>
+						<key>matchstring</key>
+						<string>execute</string>
+						<key>outputlabel</key>
+						<string>Run action</string>
+						<key>uid</key>
+						<string>WS-TO-ACTION</string>
+					</dict>
+				</array>
+				<key>elselabel</key>
+				<string>Menu</string>
+				<key>hideelse</key>
+				<false/>
+			</dict>
+		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>concurrently</key>
+				<false/>
+				<key>escaping</key>
+				<integer>68</integer>
+				<key>script</key>
+				<string></string>
+				<key>scriptargtype</key>
+				<integer>1</integer>
+				<key>scriptfile</key>
+				<string>./palette-action.py</string>
+				<key>type</key>
+				<integer>8</integer>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.action.script</string>
+			<key>uid</key>
+			<string>WS-ACTION</string>
+			<key>version</key>
+			<integer>2</integer>
+		</dict>
 	</array>
 	<key>readme</key>
-	<string>space / sp: find and switch desktop
+	<string>ws / workspace: browse desktops, actions, creation and help
+space / sp: find and switch desktop
 space back: return to the previous desktop
 sn &lt;name&gt;: rename the current desktop
 
@@ -307,6 +551,34 @@ Naming also changes Automatic color to Transparent; explicit colors are preserve
 			<integer>100</integer>
 			<key>ypos</key>
 			<integer>410</integer>
+		</dict>
+		<key>WS-ROOT</key>
+		<dict>
+			<key>xpos</key>
+			<integer>100</integer>
+			<key>ypos</key>
+			<integer>590</integer>
+		</dict>
+		<key>WS-MENU</key>
+		<dict>
+			<key>xpos</key>
+			<integer>100</integer>
+			<key>ypos</key>
+			<integer>750</integer>
+		</dict>
+		<key>WS-ROUTE</key>
+		<dict>
+			<key>xpos</key>
+			<integer>380</integer>
+			<key>ypos</key>
+			<integer>650</integer>
+		</dict>
+		<key>WS-ACTION</key>
+		<dict>
+			<key>xpos</key>
+			<integer>640</integer>
+			<key>ypos</key>
+			<integer>650</integer>
 		</dict>
 	</dict>
 	<key>userconfigurationconfig</key>

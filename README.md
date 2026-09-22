@@ -23,7 +23,7 @@ brew install jq cliclick fzf
 
 ### [Doorplate Spaces](dist/Doorplate%20Spaces.alfredworkflow)
 
-**Keywords:** `space` (or `sp`) to search desktops by name or number; `space back` to jump back; `sn <name>` to rename the current desktop.
+**Keywords:** `ws` (or `workspace`) opens the workspace palette: search desktops, then choose Switch, Rename or Close; New workspace offers creation with return/stay choices. Back rows preserve the root search. Fast paths remain `space` / `sp`, `space back`, `sn <name>`, `cs` and `ns`.
 
 Search results show desktop numbers and mark the current desktop. Renaming previews the target before Return and refuses to change a different desktop if you switched while Alfred was open. Fullscreen app Spaces are excluded. Names stay with their Space when reordered.
 

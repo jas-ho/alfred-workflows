@@ -1,5 +1,11 @@
 # Doorplate Spaces
 
+`ws` or `workspace` opens the workspace palette. Search by name, words in any order, or exact desktop number. The current desktop appears first. Return on a desktop opens Switch, Rename…, and Close…; selection alone does not switch desktops. These actions retain the selected stable desktop ID even if desktop order changes.
+
+New workspace… accepts a name and offers Create and return here or Create and stay there, showing the configured apps. It uses the existing recipe and defaults: home directory, browser new tab, blank notes window and a fresh readable tmux session. Advanced directory, URL, note and existing-session options remain in `workspace create --help`.
+
+Rename and creation start with empty name fields. Back rows remain available while typing: Rename returns to Actions, and Workspaces restores the root search. Escape dismisses Alfred. Typing `ws` again starts fresh. Help lists the fast keywords and CLI options. Close is below Switch and Rename unless explicitly searched; empty desktops close immediately, and occupied desktops retain the single confirmation described below.
+
 `space` or `sp` searches desktops by name or number. A numeric query matches the exact desktop number, as it does in `cs` and the CLI. `space back` returns to the previous desktop. `sn <name>` previews a new name for the current desktop; Return applies it. Fullscreen app Spaces cannot be named. The rename action briefly restarts Doorplate without activating it.
 
 The public CLI is `workspace`; run `workspace --help`. Alfred mutations use the same Hammerspoon operation bridge. The standalone `doorplate` CLI has been removed. See [CLI contract and setup](../new-workspace/README.md#cli).
