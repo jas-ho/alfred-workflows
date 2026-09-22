@@ -108,6 +108,91 @@ def runtime():
     return lua, worker
 
 
+def fail_result_writes(lua, condition="true"):
+    """Fail persistently once the selected write is reached."""
+    lua.execute(
+        """
+        savedWrite = hs.json.write
+        writeAttempts = 0
+        hs.json.write = function(result, path)
+            writeAttempts = writeAttempts + 1
+            if storageFailed or ("""
+        + condition
+        + """) then
+                storageFailed = true
+                error('injected storage failure')
+            end
+            -- Match serialization: later result changes cannot alter stored status.
+            local stored = {}
+            for key, value in pairs(result) do stored[key] = value end
+            return savedWrite(stored, path)
+        end
+        """
+    )
+
+
+def test_create_admission_write_failure_does_not_dispatch_or_wedge():
+    lua, worker = runtime()
+    fail_result_writes(lua)
+    assert lua.globals().request(False) is None
+    assert not worker.busy
+    assert len(lua.globals().jobs) == 0
+    assert list(lua.globals().spaces.values()) == [1, 2]
+    # Recovery requires no reload, and no admitted work was accidentally replayed.
+    lua.execute("hs.json.write=savedWrite")
+    assert lua.globals().request(False)["status"] == "complete"
+
+
+@pytest.mark.parametrize("stage", ["rename", "return", "terminal"])
+def test_create_storage_outage_keeps_work_returns_and_releases_worker(stage):
+    lua, worker = runtime()
+    condition = (
+        "result.status ~= 'running'"
+        if stage == "terminal"
+        else f"result.stage == '{stage}'"
+    )
+    fail_result_writes(lua, condition)
+    record = lua.globals().request(False)
+    assert record["status"] == "running"  # Failed persistence cannot claim completion.
+    assert not worker.busy
+    assert lua.globals().focused == 1
+    assert list(lua.globals().spaces.values()) == [1, 2, 3]
+    if stage == "rename":
+        assert len(lua.globals().jobs) == 1  # Only preflight; no further mutation.
+    else:
+        assert len(list(lua.globals().wins.values())) == 2
+    attempts = lua.globals().writeAttempts
+    worker.stop()
+    lua.globals().pump()
+    assert lua.globals().writeAttempts == attempts  # Finished context was detached.
+
+
+def test_create_shutdown_write_failure_still_terminates_helper_and_cleans_up():
+    lua, worker = runtime()
+    lua.execute(
+        """
+        local new = hs.task.new
+        hs.task.new = function(...)
+            runningJob = new(...)
+            runningJob.start = function(self) self.running=true;return self end
+            return runningJob
+        end
+        files['state/request.json']={id=string.rep('a',32),expires=5,operation='create',
+            name='Test',apps={{name='One',bundle='one',opener='chromium'}}}
+        receive()
+        """
+    )
+    assert lua.globals().runningJob.running
+    fail_result_writes(lua)
+    worker.stop()
+    assert not worker.busy
+    assert not lua.globals().runningJob.running
+    attempts = lua.globals().writeAttempts
+    lua.globals().pump()
+    assert lua.globals().writeAttempts == attempts
+    assert lua.globals().focused == 1
+
+
 def test_default_return_layout_and_focus():
     lua, worker = runtime()
     result = lua.globals().request(False)

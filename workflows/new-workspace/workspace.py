@@ -174,6 +174,14 @@ def send(request: dict, timeout: float = 270) -> dict:
             time.sleep(0.15)
         # A timeout cannot establish whether the worker changed the desktop.
         # Never replace its operation record with this client-side observation.
+        read_only = request["operation"] in ("list", "check") or (
+            request["operation"] == "close" and request.get("execute") is not True
+        )
+        guidance = (
+            "This read-only operation can be retried; inspect "
+            if read_only
+            else "Do not repeat the operation; inspect "
+        )
         return {
             **latest,
             "status": "uncertain",
@@ -181,8 +189,10 @@ def send(request: dict, timeout: float = 270) -> dict:
             "operation": request["operation"],
             "acknowledged": acknowledged,
             "error_code": "worker_timeout",
-            "error": "Worker completion is unknown. Do not repeat the operation; inspect "
-            "workspace result " + request["id"],
+            "error": "Worker completion is unknown. "
+            + guidance
+            + "workspace result "
+            + request["id"],
         }
 
 

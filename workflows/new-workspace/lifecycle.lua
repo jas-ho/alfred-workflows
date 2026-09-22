@@ -16,9 +16,10 @@ function M.new(root, deps)
             for _, timer in ipairs(ctx.timers) do timer:stop() end
             for _, task in ipairs(ctx.tasks) do if task:isRunning() then task:terminate() end end
             result.status, result.error, result.error_code = status, message, code
-            deps.write(request.id, result)
             contexts[request.id] = nil
             if mutation then deps.setBusy(false) end
+            local ok, err = pcall(deps.write, request.id, result)
+            if not ok then print('workspace: could not save result ' .. request.id .. ': ' .. tostring(err)) end
         end
         local function guard(fn)
             return function(...)
@@ -77,8 +78,8 @@ function M.new(root, deps)
             if ctx.closeOwned and SpaceClose then SpaceClose.stop() end
             finish('uncertain', ctx.stopReason.message, ctx.stopReason.code)
         end
-        deps.write(request.id, result) -- Admission acknowledgment before any helper/mutation.
         guard(function()
+            deps.write(request.id, result) -- Admission acknowledgment before any helper/mutation.
             helper({root .. '/desktop.py', 'resolve', hs.json.encode(request)}, 20, function(state)
                 local operation = request.operation
                 if operation == 'list' then copy(state); finish('complete'); return end

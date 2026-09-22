@@ -60,6 +60,11 @@ function M.start(root, dir)
         local result = ctx.result
         local finish, fail
         local function save() write(request.id, result) end
+        local function trySave()
+            local ok, err = pcall(save)
+            if not ok then print('workspace: could not save result ' .. request.id .. ': ' .. tostring(err)) end
+            return ok, err
+        end
         ctx.stop = function()
             if ctx.finished then return end
             ctx.finished = true
@@ -68,8 +73,8 @@ function M.start(root, dir)
             result.status, result.error_code = 'uncertain', 'worker_stopped'
             result.error = 'Hammerspoon stopped; inspect completed work before retrying'
             result.return_skipped = 'worker_stopped'
-            save()
             current, self.busy = nil, false
+            trySave()
         end
         local function checkFocus()
             if ctx.expectedSpace and hs.spaces.focusedSpace() ~= ctx.expectedSpace then
@@ -120,9 +125,9 @@ function M.start(root, dir)
             result.status = result.error and (result.space_id and 'partial'
                 or (result.creation_attempted and 'uncertain' or 'failed')) or 'complete'
             if result.status == 'uncertain' then result.uncertain = true end
-            save()
             self.busy = false
             current = nil
+            trySave()
             if request.notify and not result.error then
                 hs.alert.show('Created ' .. request.name, 4)
             end
@@ -142,7 +147,13 @@ function M.start(root, dir)
                 publish(); return
             end
             result.stage = 'return'
-            save()
+            -- Storage may already be unavailable when fail() calls finish().
+            -- Restoration and cleanup must not depend on another successful write.
+            local saved, err = trySave()
+            if not saved then
+                result.error = result.error or tostring(err)
+                result.failed_stage = result.failed_stage or result.stage
+            end
             local destination = request.stay and result.space_id or result.origin_id
             if not destination then publish(); return end
             switchTo(destination, function(reached, err)

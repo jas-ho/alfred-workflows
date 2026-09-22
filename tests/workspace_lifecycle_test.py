@@ -1,6 +1,8 @@
 """Exercise request admission and lifecycle callbacks without desktop mutations."""
 
-from workspace_worker_test import runtime
+import pytest
+
+from workspace_worker_test import fail_result_writes, runtime
 
 SETUP = r"""
 snapshot = {active='1',desktops={{id='1',name='Original',number=1},{id='2',name='Target',number=2}},
@@ -63,6 +65,56 @@ def setup():
     lua.globals().worker = worker
     lua.execute(SETUP)
     return lua, worker
+
+
+@pytest.mark.parametrize("operation", ["switch", "close"])
+def test_admission_write_failure_prevents_dispatch_and_releases_busy(operation):
+    lua, worker = setup()
+    fail_result_writes(lua)
+    lua.globals().submit("b", operation, True)
+    assert not worker.busy
+    assert len(lua.globals().queue) == 0  # No resolution helper was started.
+    assert lua.globals().focused == 1
+    assert lua.globals().closeCalls is None
+    lua.execute("hs.json.write=savedWrite")
+    lua.globals().submit("c", "switch", False)
+    lua.globals().pump()
+    assert lua.globals().result("c")["status"] == "complete"
+
+
+def test_terminal_write_failure_releases_busy_and_detaches_context():
+    lua, worker = setup()
+    fail_result_writes(lua, "result.status ~= 'running'")
+    lua.globals().submit("b", "switch", False)
+    lua.globals().pump()
+    assert lua.globals().focused == 2
+    assert not worker.busy
+    assert lua.globals().result("b")["status"] == "running"
+    attempts = lua.globals().writeAttempts
+    worker.stop()
+    assert lua.globals().writeAttempts == attempts
+
+
+def test_read_result_write_failure_preserves_another_operations_busy_flag():
+    lua, worker = setup()
+    worker.busy = True
+    fail_result_writes(lua, "result.status ~= 'running'")
+    lua.globals().submit("b", "list", False)
+    lua.globals().pump()
+    assert worker.busy
+
+
+def test_shutdown_write_failure_still_cancels_owned_close():
+    lua, worker = setup()
+    lua.globals().submit("b", "close", True)
+    lua.execute("table.remove(queue,1).fn()")
+    fail_result_writes(lua)
+    worker.stop()
+    assert not worker.busy
+    assert not lua.globals().SpaceClose.busy
+    attempts = lua.globals().writeAttempts
+    lua.globals().pump()
+    assert lua.globals().writeAttempts == attempts
 
 
 def test_list_admitted_while_mutation_busy_and_does_not_clear_it():

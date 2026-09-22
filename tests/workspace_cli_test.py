@@ -287,6 +287,43 @@ def test_timeout_keeps_worker_record_and_partial_details(tmp_path, monkeypatch):
     assert lock_available(tmp_path / "client.lock")
 
 
+@pytest.mark.parametrize("acknowledged", [False, True])
+@pytest.mark.parametrize(
+    "operation_request,read_only",
+    [
+        ({"operation": "list"}, True),
+        ({"operation": "check"}, True),
+        ({"operation": "close", "execute": False}, True),
+        ({"operation": "close", "execute": True}, False),
+        ({"operation": "create"}, False),
+        ({"operation": "rename"}, False),
+        ({"operation": "switch"}, False),
+        ({"operation": "back"}, False),
+    ],
+)
+def test_timeout_retry_guidance_only_allows_read_operations(
+    tmp_path, monkeypatch, acknowledged, operation_request, read_only
+):
+    monkeypatch.setattr(ws, "STATE", tmp_path)
+    ticks = clock(monkeypatch)
+
+    def step(seconds):
+        ticks[0] += seconds
+        if acknowledged:
+            submitted = json.loads((tmp_path / "request.json").read_text())
+            (tmp_path / (submitted["id"] + ".json")).write_text(
+                json.dumps({"id": submitted["id"], "status": "running"})
+            )
+
+    monkeypatch.setattr(ws.time, "sleep", step)
+    result = ws.send(operation_request, timeout=0.5)
+    assert result["status"] == "uncertain"
+    assert result["acknowledged"] is acknowledged
+    assert ("can be retried" in result["error"]) is read_only
+    assert ("Do not repeat" in result["error"]) is not read_only
+    assert "workspace result " + result["id"] in result["error"]
+
+
 def test_busy_client_does_not_overwrite_mailbox(tmp_path, monkeypatch):
     monkeypatch.setattr(ws, "STATE", tmp_path)
     mailbox = tmp_path / "request.json"
