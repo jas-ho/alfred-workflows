@@ -77,7 +77,11 @@ for path in sorted(apps, key=lambda p: os.path.basename(p).lower()):
         {
             "uid": path,
             "title": name,
-            "subtitle": "↵ New window on this desktop",
+            "subtitle": (
+                "↵ Pop out selected chat · existing pop-out may be reused"
+                if name.casefold() in {"beeper", "beeper desktop"}
+                else "↵ New window on this desktop"
+            ),
             "arg": path,
             "autocomplete": name,
             "icon": {"type": "fileicon", "path": path},

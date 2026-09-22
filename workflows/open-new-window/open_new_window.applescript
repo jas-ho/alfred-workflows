@@ -63,6 +63,7 @@ on run argv
 			set frontmost of proc to true
 		else
 			if bundleId is "md.obsidian" then return "No Obsidian window appeared. Open a vault, use installer 1.12.7+, and enable Command line interface in Settings > General."
+			if bundleId is "com.automattic.beeper.desktop" then return "Beeper did not create a new chat window. Select a chat that is not already popped out, then retry."
 			return "No new window appeared; the app may require focus or not support background windows"
 		end if
 	end tell

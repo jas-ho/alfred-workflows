@@ -184,7 +184,7 @@ Features:
 - 5-second cache for fast keystroke response
 - Shows app icons
 - Creates a new window via the app's own new-window menu item while backgrounded, then focuses it
-- Recognizes pop-out commands such as Beeper's Open Chat in New Window
+- Beeper pops out the selected chat; an existing pop-out may be reused instead of creating a new window
 - Obsidian uses its CLI to open a blank window in the active vault (requires installer 1.12.7+, an open vault, and Settings &gt; General &gt; Command line interface)
 - Supports recognized Cmd+N document commands such as New and New File
 - Reports unsupported apps instead of sending Cmd+N, which could create a note or chat
