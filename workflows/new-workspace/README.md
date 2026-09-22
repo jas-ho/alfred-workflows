@@ -11,7 +11,7 @@
 | `list`                                   | Fresh regular desktops with names, numbers, stable IDs and active ID         |
 | `switch NAME\|NUMBER` / `switch --id ID` | Navigate and verify arrival; already-current is a successful no-op           |
 | `rename NAME [--id ID]`                  | Rename current or specified desktop without switching; verify saved metadata |
-| `back`                                   | Use Doorplate history; report blocked if no transition is observed           |
+| `back`                                   | Use observed desktop history; verify the transition                          |
 | `create NAME`                            | Create a fresh desktop and configured windows, then return unless `--stay`   |
 | `close [NAME\|NUMBER\|--id ID]`          | Preview current or specified desktop; `--yes` executes and waits             |
 | `check`                                  | Read-only worker, desktop, close backend and installed-app checks            |

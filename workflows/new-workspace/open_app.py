@@ -8,6 +8,7 @@ import os
 import re
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import unicodedata
@@ -18,6 +19,13 @@ class WindowOpenError(RuntimeError):
     def __init__(self, message: str, session: str):
         super().__init__(message)
         self.session = session
+
+
+def interrupted(signum, frame):
+    # subprocess.run kills and reaps its child when this unwinds communicate().
+    # Already-delivered application actions may still complete; never retry them.
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    raise RuntimeError("App helper interrupted; inspect state before retrying")
 
 
 def run(argv: list[str], timeout: int = 30) -> str:
@@ -173,6 +181,7 @@ def open_app(request: dict, spec: dict) -> dict:
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, interrupted)
     os.environ["PATH"] = ":".join(
         [
             str(Path.home() / "bin"),

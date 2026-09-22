@@ -8,12 +8,20 @@ import json
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import uuid
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+
+
+def interrupted(signum, frame):
+    # Raising inside subprocess.run makes it kill and reap its child before
+    # unwinding the rename lock and running Doorplate recovery.
+    signal.signal(signal.SIGTERM, signal.SIG_IGN)
+    raise RuntimeError("Desktop helper interrupted; inspect state before retrying")
 
 
 def native(*args: str) -> dict:
@@ -174,4 +182,5 @@ def main(argv: list[str]) -> int:
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, interrupted)
     raise SystemExit(main(sys.argv[1:]))

@@ -48,7 +48,8 @@ hs={
  screen={find=function()return {frame=function()return {x=0,y=0,w=1200,h=900}end}end},
  geometry={rect=function(x,y,w,h)return {x=x,y=y,w=w,h=h}end},
  spaces={focusedSpace=function()return focused end,spaceDisplay=function()return 'display' end,
-  spaceType=function()return 'user'end,allSpaces=function()return {display=spaces}end,
+  watcher={new=function(fn)spaceChanged=fn;return {start=function(s)return s end,stop=function(s)s.stopped=true end}end},
+  spaceType=function(s)assert(type(s)=='number');return 'user'end,allSpaces=function()return {display=spaces}end,
   addSpaceToScreen=function()
    if switchDuring=='create' then later(.2,function() spaces={1,2,3};focused=2 end)
    else spaces={1,2,3} end

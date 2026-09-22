@@ -27,13 +27,22 @@ def action_arg(action: str, **kwargs) -> str:
     return json.dumps({"action": action, **kwargs}, ensure_ascii=False)
 
 
+def matches(space: dict, query: str) -> bool:
+    text = query.strip().casefold()
+    if text.isdecimal():
+        return space["number"] == int(text)
+    return all(
+        t in f"{space['number']} desktop {space['name']}".casefold()
+        for t in text.split()
+    )
+
+
 def space_items(state: dict, query: str) -> list[dict]:
-    terms = query.casefold().split()
     items = []
     for space in state["desktops"]:
         number, name = space["number"], space["name"]
         label = name or f"Desktop {number}"
-        if not all(t in f"{number} desktop {name}".casefold() for t in terms):
+        if not matches(space, query):
             continue
         current = space["id"] == state["active"]
         items.append(
@@ -49,7 +58,7 @@ def space_items(state: dict, query: str) -> list[dict]:
             0,
             {
                 "title": "Back to previous desktop",
-                "subtitle": "Doorplate’s jump back",
+                "subtitle": "Return to the previously visited desktop",
                 "arg": action_arg("back"),
                 "valid": True,
             },
@@ -81,13 +90,10 @@ def rename_items(state: dict, query: str) -> list[dict]:
 
 
 def close_items(state: dict, query: str) -> list[dict]:
-    terms = query.casefold().split()
     desktops = sorted(state["desktops"], key=lambda s: s["id"] != state["active"])
     items = []
     for space in desktops:
-        if not all(
-            t in f"{space['number']} desktop {space['name']}".casefold() for t in terms
-        ):
+        if not matches(space, query):
             continue
         label = space["name"] or f"Desktop {space['number']}"
         current = "Current desktop · " if space["id"] == state["active"] else ""
@@ -125,7 +131,7 @@ def perform_action(payload: dict) -> str:
     if action == "rename":
         request["name"] = payload["name"]
     if action == "close":
-        request.update(execute=True, confirm=True, notify=True)
+        request.update(execute=True, confirm=True, notify=False)
     result = workspace.envelope(workspace.send(request), action)
     if result["status"] not in ("complete", "cancelled"):
         error = result.get("error")
@@ -133,7 +139,11 @@ def perform_action(payload: dict) -> str:
         if result.get("operation_id"):
             message += " (workspace result " + result["operation_id"] + ")"
         raise RuntimeError(message)
-    return "Desktop renamed to " + payload["name"] if action == "rename" else ""
+    if action == "rename":
+        return "Desktop renamed to " + payload["name"]
+    if action == "close" and result["status"] == "complete":
+        return result["data"].get("message", "Desktop closed")
+    return ""
 
 
 def action_main(raw: str) -> None:

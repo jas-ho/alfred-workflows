@@ -20,6 +20,23 @@ end
 function M.start(root, dir)
     local self = {busy=false}
     local current
+    -- Doorplate restarts when naming a desktop, so its in-memory Back history
+    -- cannot own navigation. Observe stable IDs, including manual Space changes.
+    local activeSpace, previousSpace = hs.spaces.focusedSpace(), nil
+    local function observeSpace()
+        if WinJumpWarmTimer ~= nil then return end
+        local sid = hs.spaces.focusedSpace()
+        if not sid or sid == activeSpace then return end
+        if activeSpace and hs.spaces.spaceType(activeSpace) == 'user' then previousSpace = activeSpace end
+        activeSpace = sid
+    end
+    function self.previousSpace()
+        observeSpace()
+        if previousSpace and previousSpace ~= activeSpace and hs.spaces.spaceType(previousSpace) == 'user' then
+            return previousSpace
+        end
+    end
+    self.spaceWatcher = hs.spaces.watcher.new(observeSpace):start()
     local startupRequest = hs.json.read(dir .. '/request.json')
     local startupID = type(startupRequest) == 'table' and startupRequest.id or nil
     local function write(id, result)
@@ -32,6 +49,7 @@ function M.start(root, dir)
     end
     local lifecycle = dofile(root .. '/lifecycle.lua').new(root, {
         write=write, busy=busy, setBusy=function(value) self.busy=value end,
+        previousSpace=self.previousSpace, observeSpace=observeSpace,
     })
 
     local function create(request)
@@ -357,6 +375,7 @@ function M.start(root, dir)
         if self.stopped then return end
         self.stopped = true
         self.watcher:stop()
+        self.spaceWatcher:stop()
         if current then current.stop() end
         lifecycle.stop()
     end

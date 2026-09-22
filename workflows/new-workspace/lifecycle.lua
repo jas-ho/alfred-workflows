@@ -63,6 +63,7 @@ function M.new(root, deps)
             local function poll()
                 local active = hs.spaces.focusedSpace()
                 if (sid and active == sid) or (not sid and active and active ~= previous) then
+                    deps.observeSpace()
                     result.space_id = active
                     finish('complete')
                 elseif hs.timer.secondsSinceEpoch() >= deadline then
@@ -94,18 +95,24 @@ function M.new(root, deps)
                 if operation == 'back' then
                     local previous = hs.spaces.focusedSpace()
                     assert(previous, 'Could not read current desktop')
+                    local destination = deps.previousSpace()
                     ctx.mutated = true
-                    assert(hs.urlevent.openURL('doorplate://back'), 'Could not open Doorplate Back')
-                    verifySwitch(nil, previous); return
+                    if destination then
+                        assert(hs.spaces.gotoSpace(destination), 'Could not return to previous desktop')
+                    else
+                        assert(hs.urlevent.openURL('doorplate://back'), 'Could not open Doorplate Back')
+                    end
+                    verifySwitch(destination, previous); return
                 end
                 local target = assert(state.target, 'Missing resolved desktop')
                 local sid = tonumber(target.id)
                 assert(sid and sid > 0 and sid <= 9007199254740991 and sid % 1 == 0, 'Invalid desktop ID')
                 result.space_id, result.name = target.id, target.name ~= '' and target.name or 'Desktop ' .. target.number
                 if operation == 'switch' then
+                    deps.observeSpace()
                     if hs.spaces.focusedSpace() == sid then result.already_current=true; finish('complete'); return end
                     ctx.mutated = true
-                    assert(hs.urlevent.openURL('doorplate://switch/' .. target.number), 'Could not open Doorplate switch')
+                    assert(hs.spaces.gotoSpace(sid), 'Could not switch to the selected desktop')
                     verifySwitch(sid); return
                 end
                 if operation == 'rename' then

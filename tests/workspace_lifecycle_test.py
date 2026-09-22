@@ -19,6 +19,11 @@ hs.task.new = function(command, cb, args)
  end
  return job
 end
+local gotoSpace = hs.spaces.gotoSpace
+hs.spaces.gotoSpace = function(sid)
+ if noNavigation then return true end
+ return gotoSpace(sid)
+end
 hs.urlevent = {openURL=function(url)
  urls=(urls or 0)+1
  if not noNavigation then focused=2 end
@@ -136,7 +141,7 @@ def test_switch_requires_observed_arrival_and_current_is_noop():
     lua.globals().pump()
     assert lua.globals().result("c")["status"] == "complete"
     assert lua.globals().result("c")["already_current"]
-    assert lua.globals().urls == 1
+    assert lua.globals().urls is None
 
 
 def test_back_no_transition_is_blocked():
@@ -145,6 +150,38 @@ def test_back_no_transition_is_blocked():
     lua.globals().submit("b", "back", False)
     lua.globals().pump()
     assert lua.globals().result("b")["status"] == "blocked"
+
+
+def test_back_survives_rename_without_doorplate_history():
+    lua, worker = setup()
+    lua.globals().submit("b", "switch", False)
+    lua.globals().pump()
+    assert worker.previousSpace() == 1
+    lua.execute(
+        "files['state/request.json']={id=string.rep('c',32),expires=now+5,operation='rename',name='test2',space_id='2'};receive();pump()"
+    )
+    assert lua.globals().result("c")["status"] == "complete"
+    lua.execute("hs.urlevent.openURL=function()error('Doorplate history was reset')end")
+    lua.globals().submit("d", "back", False)
+    lua.globals().pump()
+    assert lua.globals().result("d")["status"] == "complete"
+    assert lua.globals().focused == 1
+    assert (
+        lua.globals().urls is None
+    )  # Neither switch nor Back depends on Doorplate history.
+
+
+def test_manual_navigation_updates_history_and_warming_does_not():
+    lua, worker = setup()
+    assert worker.previousSpace() is None
+    lua.execute("focused=2;spaceChanged()")
+    assert worker.previousSpace() == 1
+    lua.execute(
+        "WinJumpWarmTimer={};focused=3;spaceChanged();focused=2;spaceChanged();WinJumpWarmTimer=nil"
+    )
+    assert worker.previousSpace() == 1
+    worker.stop()
+    assert worker.spaceWatcher.stopped
 
 
 def test_read_helper_timeout_does_not_clear_another_mutations_busy_flag():

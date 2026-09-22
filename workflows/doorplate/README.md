@@ -1,6 +1,6 @@
 # Doorplate Spaces
 
-`space` or `sp` searches desktops by name or number. `space back` returns to the previous desktop. `sn <name>` previews a new name for the current desktop; Return applies it. Fullscreen app Spaces cannot be named. The rename action briefly restarts Doorplate without activating it.
+`space` or `sp` searches desktops by name or number. A numeric query matches the exact desktop number, as it does in `cs` and the CLI. `space back` returns to the previous desktop. `sn <name>` previews a new name for the current desktop; Return applies it. Fullscreen app Spaces cannot be named. The rename action briefly restarts Doorplate without activating it.
 
 The public CLI is `workspace`; run `workspace --help`. Alfred mutations use the same Hammerspoon operation bridge. The standalone `doorplate` CLI has been removed. See [CLI contract and setup](../new-workspace/README.md#cli).
 
@@ -10,7 +10,7 @@ Naming a desktop through `sn` or the CLI also changes its Automatic color to Tra
 
 `cs [name or number]` lists desktops with the current one first. Empty desktops close immediately. If a desktop has exclusive windows, one centered confirmation summarizes the apps and window counts where you are currently working; Cancel is the default. Confirming requests normal window closes concurrently across apps, one outstanding close per app, then removes the desktop only after verifying closure. Windows shared with other desktops stay open. The last normal desktop on a display cannot be closed.
 
-Closing another desktop does not first visit it. If the target is still active when it is ready for removal, the workflow uses Doorplate’s `space back` history to leave it, with a same-display neighbor as a fallback when Back cannot leave the target. Otherwise it stays on your current desktop. Background window inspection must succeed; an uninspectable window stops the operation instead of automatically switching to it.
+Closing another desktop does not first visit it. If the target is still active when it is ready for removal, the workflow returns to the previously visited desktop, captured when close was invoked. Hammerspoon observes desktop changes, so renaming (which restarts Doorplate) preserves this history. If no usable history exists after a Hammerspoon reload, it tries Doorplate Back, then a same-display neighbor. Otherwise it stays on your current desktop. Background window inspection must succeed; an uninspectable window stops the operation instead of automatically switching to it.
 
 Save prompts are never answered automatically. A window that remains open or changed desktop contents stops the operation; handle the prompt and run `cs` again. Earlier successful closes are not undone. Merely switching desktops does not cancel a confirmed operation: its target is the selected desktop and the specific windows you reviewed. Applications are not quit or killed.
 
@@ -20,7 +20,7 @@ Closing requires the shared workspace worker and Jason's Hammerspoon configurati
 
 ## Native interface
 
-Switching uses `doorplate://switch/NUMBER` and `doorplate://back`. Listing uses macOS SkyLight and Doorplate's `Doorplate.meta.v2` preference. Renaming targets the observed Doorplate 1.6.2 format and fails closed on other versions. The native helper does not perform UI scripting or request Accessibility access.
+Switching targets stable desktop IDs. Back and close share Hammerspoon’s observed history, which survives Doorplate restarts but resets when Hammerspoon reloads. `doorplate://back` is used only when no observed history is available. Listing uses macOS SkyLight and Doorplate's `Doorplate.meta.v2` preference. Renaming targets the observed Doorplate 1.6.2 format and fails closed on other versions. The native helper does not perform UI scripting or request Accessibility access.
 
 ## Backup recovery
 

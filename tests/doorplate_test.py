@@ -184,14 +184,14 @@ def test_alfred_close_uses_bridge_and_waits_for_terminal_result(monkeypatch):
         }
 
     monkeypatch.setattr(dp.workspace, "send", send)
-    assert dp.perform_action({"action": "close", "id": "5"}) == ""
+    assert dp.perform_action({"action": "close", "id": "5"}) == "Desktop closed"
     assert calls == [
         {
             "operation": "close",
             "space_id": "5",
             "execute": True,
             "confirm": True,
-            "notify": True,
+            "notify": False,
         }
     ]
 
@@ -208,3 +208,10 @@ def test_alfred_reports_blocked_result_not_success(monkeypatch):
     )
     with pytest.raises(RuntimeError, match="App needs attention"):
         dp.perform_action({"action": "close", "id": "5"})
+
+
+@pytest.mark.parametrize("picker", [dp.space_items, dp.close_items])
+def test_numeric_query_is_exact_even_when_current_has_matching_digits(state, picker):
+    state["desktops"].append({"id": "12", "number": 12, "name": "2"})
+    state["active"] = "12"
+    assert [json.loads(item["arg"])["id"] for item in picker(state, "2")] == ["3"]
