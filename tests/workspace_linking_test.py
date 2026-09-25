@@ -50,9 +50,9 @@ def projects(tmp_path, monkeypatch):
 @pytest.mark.parametrize(
     "query,expected",
     [
-        ("STOCKHOLM", "2026-03_stockholm"),
-        ("  stockholm  ", "2026-03_stockholm"),
-        ("2026-03_stockholm", "2026-03_stockholm"),
+        ("STOCKHOLM", "stockholm"),
+        ("  stockholm  ", "stockholm"),
+        ("2026-03_stockholm", "stockholm"),
         ("stock", None),
     ],
 )
@@ -99,7 +99,7 @@ def test_aliases_deduplicate_and_use_canonical_basename(projects):
     (root / "work").mkdir()
     (root / "work" / "stockholm").symlink_to(root / "life" / "2026-03_stockholm")
     result = terminal.resolve("stockholm", projects)
-    assert result["new_tmux_session"] == "2026-03_stockholm"
+    assert result["new_tmux_session"] == "stockholm"
     assert not result["ambiguous"]
 
 
@@ -127,7 +127,7 @@ def test_unreadable_path_is_not_a_miss(projects, monkeypatch):
         {},
         [{"path": "~", "depth": True}],
         [{"path": "~", "depth": 0}],
-        [{"path": "~", "depth": 4}],
+        [{"path": "~", "depth": 17}],
         [{"depth": 1}],
         [{"path": "", "depth": 1}],
     ],
@@ -146,7 +146,7 @@ def test_omitted_roots_unicode_and_punctuation(tmp_path, monkeypatch):
     result = terminal.resolve(
         "a.b:c 'notes'", {"project_roots": [{"path": str(tmp_path), "depth": 1}]}
     )
-    assert result["new_tmux_session"] == "2026-13_a_b_c 'Notes'"
+    assert result["new_tmux_session"] == "a_b_c 'Notes'"
     assert result["directory"] == str(folder)
 
 
@@ -467,7 +467,7 @@ def test_symlink_loops_are_ignored_at_each_depth(tmp_path):
     (tmp_path / "category").mkdir()
     (tmp_path / "category" / "loop").symlink_to(tmp_path / "category" / "loop")
     assert terminal.folders(tmp_path, 1) == [tmp_path / "category"]
-    assert terminal.folders(tmp_path, 2) == []
+    assert terminal.folders(tmp_path, 2) == [tmp_path / "category"]
 
 
 def test_check_reports_invalid_roots(fake_recipe, monkeypatch):
@@ -520,3 +520,158 @@ def test_older_workspace_installation_keeps_desktop_navigation(monkeypatch, caps
     assert rows[0]["variables"]["ws_screen"] == "actions"
     assert not rows[1]["valid"]
     assert "Update New Workspace" in rows[1]["subtitle"]
+
+
+def test_recursive_search_includes_top_level_and_nested_projects(tmp_path, monkeypatch):
+    monkeypatch.setattr(terminal, "sessions", lambda: [])
+    paths = [
+        tmp_path / "direct-project",
+        tmp_path / "work" / "accelerate-europe" / "transformative-ki-at",
+        tmp_path
+        / "work"
+        / "accelerate-europe"
+        / "transformative-ki-at"
+        / "2026-09_talk",
+    ]
+    for path in paths:
+        path.mkdir(parents=True, exist_ok=True)
+    # A parent README does not stop traversal; descendants need no markers.
+    (tmp_path / "work" / "accelerate-europe" / "README.md").touch()
+    too_deep = paths[-1] / "beyond-limit"
+    too_deep.mkdir()
+    data = {"project_roots": [{"path": str(tmp_path), "depth": 4}]}
+    for query, path in zip(["direct-project", "transformative-ki-at", "talk"], paths):
+        result = terminal.resolve(query, data)
+        assert result["directory"] == str(path)
+        assert result["new_tmux_session"] == query
+    assert terminal.resolve("beyond-limit", data) == terminal.intent()
+
+
+def test_same_name_at_different_depths_is_ambiguous(tmp_path, monkeypatch):
+    monkeypatch.setattr(terminal, "sessions", lambda: [])
+    (tmp_path / "fellows-integration").mkdir()
+    (tmp_path / "work" / "lot4" / "fellows-integration").mkdir(parents=True)
+    data = {"project_roots": [{"path": str(tmp_path), "depth": 4}]}
+    assert terminal.resolve("fellows-integration", data) == terminal.intent(
+        ambiguous=True
+    )
+
+
+@pytest.mark.parametrize(
+    "query,names,expected",
+    [
+        ("stockholm", [], "stockholm"),
+        ("stockholm", ["stockholm"], "stockholm"),
+        ("stockholm", ["2026-03_stockholm"], "2026-03_stockholm"),
+        ("stockholm", ["stockholm", "2026-03_stockholm"], "stockholm"),
+        ("2026-03_stockholm", ["stockholm"], "stockholm"),
+        ("2026-03_stockholm", ["stockholm", "2026-03_stockholm"], "2026-03_stockholm"),
+    ],
+)
+def test_undated_naming_and_legacy_reattachment(
+    projects, monkeypatch, query, names, expected
+):
+    monkeypatch.setattr(terminal, "sessions", lambda: names)
+    result = terminal.resolve(query, projects)
+    assert result["tmux_session"] == (expected if names else None)
+    assert result["new_tmux_session"] == (None if names else expected)
+
+
+def test_multiple_dated_folders_do_not_select_a_legacy_session(projects, monkeypatch):
+    root = Path(projects["project_roots"][0]["path"])
+    (root / "life" / "2027-03_stockholm").mkdir()
+    monkeypatch.setattr(terminal, "sessions", lambda: ["2026-03_stockholm"])
+    assert terminal.resolve("stockholm", projects) == terminal.intent(ambiguous=True)
+
+
+def test_derived_undated_name_case_collision_is_ambiguous(projects, monkeypatch):
+    monkeypatch.setattr(terminal, "sessions", lambda: ["stockholm", "Stockholm"])
+    assert terminal.resolve("2026-03_stockholm", projects) == terminal.intent(
+        ambiguous=True
+    )
+
+
+def test_recursive_aliases_follow_targets_but_not_ancestor_cycles(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(terminal, "sessions", lambda: [])
+    project = tmp_path / "group" / "project"
+    project.mkdir(parents=True)
+    (tmp_path / "alias").symlink_to(tmp_path / "group")
+    (project / "cycle").symlink_to(tmp_path)
+    data = {"project_roots": [{"path": str(tmp_path), "depth": 4}]}
+    assert terminal.resolve("project", data)["directory"] == str(project)
+    assert terminal.resolve("cycle", data) == terminal.intent()
+
+
+def test_recursive_unreadable_directory_remains_an_error(tmp_path, monkeypatch):
+    child = tmp_path / "category"
+    child.mkdir()
+    real_scandir = terminal.os.scandir
+
+    def scan(path):
+        if path == child:
+            raise PermissionError(13, "Permission denied", str(path))
+        return real_scandir(path)
+
+    monkeypatch.setattr(terminal.os, "scandir", scan)
+    with pytest.raises(RuntimeError, match="Cannot search.*category"):
+        terminal.folders(tmp_path, 4)
+
+
+def test_real_tmux_undated_session_and_legacy_reuse(isolated_tmux, tmp_path):
+    folder = tmp_path / "2026-03_stockholm"
+    folder.mkdir()
+    data = {"project_roots": [{"path": str(tmp_path), "depth": 4}]}
+    result = terminal.resolve("stockholm", data)
+    assert result["new_tmux_session"] == "stockholm"
+    opener.new_session(isolated_tmux, "2026-03_stockholm", str(folder))
+    assert terminal.resolve("stockholm", data)["tmux_session"] == "2026-03_stockholm"
+    opener.new_session(isolated_tmux, "stockholm", str(folder))
+    assert terminal.resolve("stockholm", data)["tmux_session"] == "stockholm"
+    assert sorted(terminal.sessions()) == ["2026-03_stockholm", "stockholm"]
+
+
+def test_date_only_folder_keeps_a_nonempty_session_name(tmp_path, monkeypatch):
+    monkeypatch.setattr(terminal, "sessions", lambda: [])
+    (tmp_path / "2026-03_").mkdir()
+    result = terminal.resolve(
+        "2026-03_", {"project_roots": [{"path": str(tmp_path), "depth": 1}]}
+    )
+    assert result["new_tmux_session"] == "2026-03_"
+
+
+def test_directory_alias_outside_root_is_traversed(tmp_path, monkeypatch):
+    monkeypatch.setattr(terminal, "sessions", lambda: [])
+    root = tmp_path / "search"
+    root.mkdir()
+    external = tmp_path / "outside" / "project" / "nested"
+    external.mkdir(parents=True)
+    (root / "project").symlink_to(external.parent)
+    data = {"project_roots": [{"path": str(root), "depth": 2}]}
+    assert terminal.resolve("nested", data)["directory"] == str(external)
+    data["project_roots"][0]["depth"] = 1
+    assert terminal.resolve("nested", data) == terminal.intent()
+
+
+def test_leaf_directories_do_not_need_extra_metadata_reads(tmp_path, monkeypatch):
+    from contextlib import nullcontext
+
+    child = tmp_path / "project"
+    child.mkdir()
+
+    class Entry:
+        name = child.name
+        path = str(child)
+
+        def is_dir(self):
+            return True
+
+        def is_symlink(self):
+            return False
+
+        def stat(self):
+            pytest.fail("Unnecessary metadata read at depth boundary")
+
+    monkeypatch.setattr(terminal.os, "scandir", lambda _: nullcontext([Entry()]))
+    assert terminal.folders(tmp_path, 1) == [child]

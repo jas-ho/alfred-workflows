@@ -1,6 +1,6 @@
 # Workspace name linking and palette creation
 
-Status: implemented and reviewed on 2026-09-25 after Jason approved the revised plan. Scope is terminal linking and palette creation, not saved workspace configurations.
+Status: implemented and reviewed on 2026-09-25 after Jason approved the revised plan. The recursive-discovery follow-up below supersedes the original exact-depth and dated-session naming rules. Scope is terminal linking and palette creation, not saved workspace configurations.
 
 ## Confirmed behavior
 
@@ -83,3 +83,13 @@ Opus 5.5 reviewed the proposal in two completed rounds: REVISE, then APPROVED. T
 Implementation review clarified two matching boundaries: normalize Unicode to NFC before casefolding, and reject dots/colons in explicit tmux session names because tmux interprets them as target syntax. Existing attachment targets are rechecked immediately before launching Ghostty.
 
 Implementation validation: 385 tests passed, including isolated real tmux creation/attachment and cwd checks; ruff and mypy passed with the project Python environment. Both archives were rebuilt and their sources verified. Opus 5.5 approved after three implementation-review rounds; native Codex follow-up found no blockers. The dedicated `codex review --uncommitted` launcher failed at sandbox initialization on both attempts, so the native review replaced that check. Read-only live resolver checks took roughly 6–13 ms median per query; full GUI creation was not driven during this change.
+
+## Recursive-discovery follow-up
+
+Jason confirmed marker-free recursive exact-name search, with maximum depth 4 for Projects and 1 for Code. `depth` now includes all levels from 1 to the configured maximum (1–16). Nested folders remain eligible even under another project; no README, Git marker, category allowlist or project-stop rule is added. Ancestor cycles are skipped, directory aliases still deduplicate by real path, and unreadable directories still produce an error. Scanning examines directory entries, not file contents. Both distinct `fellows-integration` folders remain untouched and ambiguous when no exact session wins.
+
+New folder-derived sessions strip one leading `YYYY-MM_` prefix. After exact typed-session precedence and unique folder resolution, prefer an existing undated session, then a legacy full folder-named session, otherwise create the undated session. Existing sessions are never renamed. Case collisions and multiple matching folders retain the existing ambiguity behavior.
+
+The follow-up adds regression cases for levels 1–4, nested projects beneath a parent README, the maximum boundary, same names at different depths, recursive aliases/cycles, dated-session migration and real tmux reattachment. No GUI creation is needed for these resolver changes; Jason already exercised the previous version’s full creation path successfully.
+
+Follow-up validation: 401 tests passed; lint and type checks passed using the project Python environment. Opus 5.5 approved after one revision; native Codex review found no issues (the dedicated review CLI still failed at sandbox initialization). Final live resolver medians were about 6 ms for a session match and 25–26 ms for folder lookup, with a no-session simulation confirming the depth-3 project resolves after reboot. The workflow archive was rebuilt and verified.

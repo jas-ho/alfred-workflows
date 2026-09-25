@@ -100,43 +100,63 @@ def project_roots(data: dict) -> list[tuple[Path, int]]:
             or not isinstance(item.get("path"), str)
             or not item["path"].strip()
             or type(item.get("depth")) is not int
-            or not 1 <= item["depth"] <= 3
+            or not 1 <= item["depth"] <= 16
         ):
             raise ValueError(
-                "Each project_roots entry needs a path and integer depth from 1 to 3"
+                "Each project_roots entry needs a path and maximum depth from 1 to 16"
             )
         result.append((Path(item["path"]).expanduser(), item["depth"]))
     return result
 
 
 def folders(root: Path, depth: int) -> list[Path]:
-    """Enumerate an exact depth; missing paths are empty, inaccessible paths fail."""
-    try:
-        if not stat.S_ISDIR(root.stat().st_mode):
-            return []
-        with os.scandir(root) as entries:
-            children = sorted(
-                (Path(e.path) for e in entries if not e.name.startswith("."))
-            )
-        result = []
-        for child in children:
-            if depth > 1:
-                result.extend(folders(child, depth - 1))
-            else:
+    """Find directories at depths 1..depth, without markers or ancestor cycles."""
+
+    def walk(
+        directory: Path, remaining: int, ancestors: set[tuple[int, int]]
+    ) -> list[Path]:
+        try:
+            info = directory.stat()
+            identity = (info.st_dev, info.st_ino)
+            if not stat.S_ISDIR(info.st_mode) or identity in ancestors:
+                return []
+            ancestors = ancestors | {identity}
+            with os.scandir(directory) as entries:
+                children = sorted(
+                    (e for e in entries if not e.name.startswith(".")),
+                    key=lambda e: e.name,
+                )
+            result = []
+            for entry in children:
                 try:
-                    if stat.S_ISDIR(child.stat().st_mode):
-                        result.append(child)
+                    # scandir knows regular-file types without inspecting their metadata.
+                    if not entry.is_dir():
+                        continue
+                    if entry.is_symlink():
+                        info = entry.stat()
+                        if (info.st_dev, info.st_ino) in ancestors:
+                            continue
+                    child = Path(entry.path)
+                    result.append(child)
+                    if remaining > 1:
+                        result.extend(walk(child, remaining - 1, ancestors))
                 except OSError as error:
                     if error.errno not in (errno.ENOENT, errno.ELOOP):
                         raise
-        return result
-    except OSError as error:
-        if error.errno in (errno.ENOENT, errno.ELOOP):
-            return []
-        raise RuntimeError(
-            f"Cannot search {error.filename or root}: {error.strerror}; "
-            "fix access or use workspace create NAME --directory ~"
-        ) from error
+            return result
+        except OSError as error:
+            if error.errno in (errno.ENOENT, errno.ELOOP):
+                return []
+            raise RuntimeError(
+                f"Cannot search {error.filename or directory}: {error.strerror}; "
+                "fix access or use workspace create NAME --directory ~"
+            ) from error
+
+    return walk(root, depth, set())
+
+
+def undated(name: str) -> str:
+    return re.sub(r"^[0-9]{4}-[0-9]{2}_", "", name, count=1) or name
 
 
 def folder_matches(name: str, candidates: list[Path]) -> list[Path]:
@@ -144,7 +164,7 @@ def folder_matches(name: str, candidates: list[Path]) -> list[Path]:
     for path in candidates:
         if key(name) in (
             key(path.name),
-            key(re.sub(r"^[0-9]{4}-[0-9]{2}_", "", path.name, count=1)),
+            key(undated(path.name)),
         ):
             matched.add(path.resolve())
     return sorted(matched)
@@ -177,8 +197,14 @@ def resolve(name: str, data: dict) -> dict:
             return intent(ambiguous=True)
         if folder_hits:
             folder = folder_hits[0]
-            derived = session_name(folder.name.replace(".", "_").replace(":", "_"))
+            derived = session_name(
+                undated(folder.name).replace(".", "_").replace(":", "_")
+            )
             existing = session_match(derived, names)
+            if not existing:
+                # Reuse sessions created before folder-derived names dropped dates.
+                legacy = folder.name.replace(".", "_").replace(":", "_")
+                existing = session_match(legacy, names)
             if len(existing) > 1:
                 return intent(ambiguous=True)
             return intent(

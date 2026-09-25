@@ -1,7 +1,7 @@
 {
   "layout": "columns",
   "project_roots": [
-    {"path": "~/Projects", "depth": 2},
+    {"path": "~/Projects", "depth": 4},
     {"path": "~/Code", "depth": 1}
   ],
   "apps": [
