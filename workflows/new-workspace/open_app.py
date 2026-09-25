@@ -4,15 +4,15 @@
 from __future__ import annotations
 
 import json
-import os
 import re
 import shlex
-import shutil
 import signal
 import subprocess
 import sys
 import unicodedata
 from pathlib import Path
+
+import workspace_terminal as terminal
 
 
 class WindowOpenError(RuntimeError):
@@ -30,7 +30,12 @@ def interrupted(signum, frame):
 
 def run(argv: list[str], timeout: int = 30) -> str:
     result = subprocess.run(
-        argv, capture_output=True, text=True, timeout=timeout, check=False
+        argv,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=False,
+        env=terminal.environment(),
     )
     output = result.stdout.strip()
     if result.returncode or any(
@@ -56,9 +61,7 @@ def preflight(request: dict) -> dict:
     """Check prerequisites before creating a desktop; never create content here."""
     for spec in request["apps"]:
         if spec["opener"] == "ghostty":
-            tmux = shutil.which("tmux")
-            if not tmux:
-                raise RuntimeError("tmux is not installed")
+            tmux = terminal.tmux_binary()
             if request.get("tmux_session"):
                 run([tmux, "has-session", "-t", "=" + request["tmux_session"]])
         if spec["opener"] == "obsidian":
@@ -103,13 +106,41 @@ end using terms from
 end run"""
 
 
+def new_session(tmux: str, name: str, directory: str) -> None:
+    run(
+        [
+            tmux,
+            "new-session",
+            "-d",
+            "-s",
+            name,
+            "-c",
+            directory,
+            "-e",
+            "PATH=" + terminal.environment()["PATH"],
+        ]
+    )
+
+
 def open_app(request: dict, spec: dict) -> dict:
     kind = spec["opener"]
     if kind == "ghostty":
-        tmux = shutil.which("tmux")
-        if not tmux:
-            raise RuntimeError("tmux is not installed")
+        tmux = terminal.tmux_binary()
+        if not Path(request["directory"]).is_dir():
+            raise RuntimeError("Directory does not exist: " + request["directory"])
         session = request.get("tmux_session") or ""
+        if not session and request.get("new_tmux_session"):
+            session = terminal.session_name(request["new_tmux_session"])
+            try:
+                new_session(tmux, session, request["directory"])
+            except RuntimeError as error:
+                # A concurrent creator may have claimed this exact folder name.
+                # Never retry a timed-out launch or attach a different name.
+                # Concurrent case variants remain distinct tmux sessions.
+                try:
+                    run([tmux, "has-session", "-t", "=" + session])
+                except RuntimeError:
+                    raise error
         if not session:
             slug = re.sub(
                 r"[^\w-]+",
@@ -120,19 +151,7 @@ def open_app(request: dict, spec: dict) -> dict:
             for number in range(1, 101):
                 session = base if number == 1 else f"{base}-{number}"
                 try:
-                    run(
-                        [
-                            tmux,
-                            "new-session",
-                            "-d",
-                            "-s",
-                            session,
-                            "-c",
-                            request["directory"],
-                            "-e",
-                            "PATH=" + os.environ["PATH"],
-                        ]
-                    )
+                    new_session(tmux, session, request["directory"])
                     break
                 except RuntimeError as error:
                     # new-session is atomic. Only a name collision is retried;
@@ -142,8 +161,22 @@ def open_app(request: dict, spec: dict) -> dict:
             else:
                 raise RuntimeError("Too many tmux sessions named " + base)
         # No send-keys, switch-client, or detach-other-clients: only the new window attaches.
-        command = shlex.join([tmux, "attach-session", "-t", "=" + session])
+        command = shlex.join(
+            [
+                "/usr/bin/env",
+                "-u",
+                "TMUX",
+                "-u",
+                "TMUX_TMPDIR",
+                tmux,
+                "attach-session",
+                "-t",
+                "=" + session,
+            ]
+        )
         try:
+            # Earlier apps may take time to open after preflight.
+            run([tmux, "has-session", "-t", "=" + session])
             native_id = run(
                 [
                     "/usr/bin/osascript",
@@ -182,20 +215,6 @@ def open_app(request: dict, spec: dict) -> dict:
 
 if __name__ == "__main__":
     signal.signal(signal.SIGTERM, interrupted)
-    os.environ["PATH"] = ":".join(
-        [
-            str(Path.home() / "bin"),
-            str(Path.home() / ".local/bin"),
-            str(Path.home() / ".volta/bin"),
-            "/opt/homebrew/bin",
-            "/opt/homebrew/sbin",
-            "/usr/local/bin",
-            "/usr/bin",
-            "/bin",
-            "/usr/sbin",
-            "/sbin",
-        ]
-    )
     try:
         request = json.loads(sys.argv[2])
         result = (

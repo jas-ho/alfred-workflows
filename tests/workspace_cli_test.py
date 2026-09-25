@@ -3,11 +3,13 @@
 import fcntl
 import importlib.util
 import json
+import sys
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1] / "workflows/new-workspace"
+sys.path.insert(0, str(ROOT))
 spec = importlib.util.spec_from_file_location("public_workspace", ROOT / "workspace.py")
 assert spec is not None and spec.loader is not None
 ws = importlib.util.module_from_spec(spec)
@@ -130,7 +132,7 @@ def test_operation_request_targeting_and_close_policy(argv, expected):
 
 def test_check_reports_recipe_failure_without_skipping_live_checks(monkeypatch):
     monkeypatch.setattr(
-        ws, "recipe", lambda: (_ for _ in ()).throw(ValueError("Missing app"))
+        ws, "recipe", lambda **kwargs: (_ for _ in ()).throw(ValueError("Missing app"))
     )
     request = ws.operation_request(ws.parser().parse_args(["check"]))
     assert request["operation"] == "check"

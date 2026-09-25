@@ -12,6 +12,7 @@ def test_sigterm_reaps_native_subprocess(helper):
     module = Path(__file__).resolve().parents[1] / "workflows/new-workspace" / helper
     code = r"""
 import importlib.util, os, signal, subprocess, sys, threading, time
+sys.path.insert(0, os.path.dirname(sys.argv[1]))
 spec = importlib.util.spec_from_file_location('helper', sys.argv[1])
 helper = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(helper)

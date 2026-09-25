@@ -1,5 +1,9 @@
 {
   "layout": "columns",
+  "project_roots": [
+    {"path": "~/Projects", "depth": 2},
+    {"path": "~/Code", "depth": 1}
+  ],
   "apps": [
     {"app": "/Applications/Microsoft Edge.app", "opener": "chromium"},
     {"app": "/Applications/Obsidian.app", "opener": "obsidian", "vault": "Projects"},

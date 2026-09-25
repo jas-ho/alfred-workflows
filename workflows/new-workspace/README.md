@@ -53,13 +53,26 @@ Statuses are `complete`, `running`, `confirmation_required`, `blocked`, `cancell
 
 `check` never opens test windows or triggers permission prompts. It reports Automation permissions and Obsidian CLI readiness as unchecked; those cannot be established by the local installed-app checks.
 
-Name is the only required input. The terminal defaults to home and a unique new tmux session named after the workspace, such as `ws-research` (`-2`, `-3`, etc. on collision). Existing sessions are never reused implicitly. `--tmux-session` attaches an existing session without moving or detaching its other clients. A project directory only affects a newly created session; attaching an existing session preserves its working state. Obsidian opens an empty pane unless an existing vault-relative note is specified. It never creates a note. URLs become tabs in the single new browser window.
+Name is the only required input. With the Ghostty opener, an exact case-insensitive name match attaches a running tmux session first, then searches the ordered `project_roots` below. A unique folder match creates a session named after that folder, with the folder as its working directory; an existing folder-named session is attached instead. Folder matching also ignores a leading `YYYY-MM_` prefix: `stockholm` matches `2026-03_stockholm`, but `stock` does not. No match creates a fresh home session such as `ws-research` (`-2`, `-3`, etc. on collision). Ambiguous matches also create a fresh home session and are explained in subtitles or CLI stderr. `--directory` or `--tmux-session` bypasses automatic linking; `--directory ~` explicitly requests a fresh home session. `--tmux-session` is attach-only and does not move or detach other clients. A project directory only affects a newly created session; attaching an existing session preserves its working state. Obsidian opens an empty pane unless an existing vault-relative note is specified. It never creates a note. URLs become tabs in the single new browser window.
 
-Every `create` means a fresh desktop, even with the same name. There is no implicit reuse or retry. The command returns a nonzero exit code for partial/uncertain outcomes and keeps successful work. JSON results include the operation ID, desktop ID, confirmed window IDs/PIDs, tmux session, failed stage, and return outcome. `result` reads the recorded result without repeating the operation. A timeout does not prove that nothing was created. Human-readable failures name the kept windows/session and provide a `workspace switch --id …` command; Alfred failures point to `sp`. Inspect the partial workspace before creating another one.
+Every `create` means a fresh desktop, even with the same name. Terminal linking can reuse a tmux session, but never reuses a desktop or retries an operation. The command returns a nonzero exit code for partial/uncertain outcomes and keeps successful work. JSON results include the operation ID, desktop ID, confirmed window IDs/PIDs, tmux session, failed stage, and return outcome. `result` reads the recorded result without repeating the operation. A timeout does not prove that nothing was created. Human-readable failures name the kept windows/session and provide a `workspace switch --id …` command; Alfred failures point to `sp`. Inspect the partial workspace before creating another one.
 
 ## Configuration
 
 Copy `default.json` to `~/.config/workspace/default.json` and edit it, or use `--config path.json`. The app list controls both opening order and layout order; the last window receives focus. Layouts: `columns`, `main-stack` (first window left, remaining windows stacked right), or `none`. Override for one invocation with `--layout`.
+
+`project_roots` is an ordered list of folder search tiers. The bundled personal recipe uses:
+
+```json
+"project_roots": [
+  {"path": "~/Projects", "depth": 2},
+  {"path": "~/Code", "depth": 1}
+]
+```
+
+Depth is exact (1–3), so the first tier searches category/project pairs. Missing or empty `project_roots` disables folder lookup but keeps session matching. No Git or vault metadata is required. Hidden entries, files, missing roots and dangling symlinks are ignored. An unreadable directory stops inference with its path and an actionable error; it is not treated as no match. The first tier with matches wins; multiple different real paths in that tier are ambiguous and do not fall through. Same-target symlinks count once and use the canonical target's basename for session naming. Folder-derived names preserve case and spaces; tmux-incompatible dots/colons become underscores. Existing sessions are matched by name, not by their current directory. Multiple casefold-equal session names are ambiguous.
+
+Inventory, creation and attachment consistently use tmux's standard default server, ignoring ambient `TMUX` and `TMUX_TMPDIR`. Subtitles are read-only previews; execution resolves afresh. A missing attachment target or failed lookup stops creation rather than silently choosing another target. Recipes without Ghostty skip terminal linking entirely. Linking changes neither browser nor Obsidian content.
 
 An ordinary app can use its own menu command without adding application-specific code:
 
@@ -105,4 +118,4 @@ Setup briefly visits the new desktop. Success and ordinary failure both attempt 
 
 ## Agent boundary
 
-Agents decide whether a task deserves its own workspace and supply the name, directory, URLs, note, and optional existing tmux session. The CLI performs only the requested setup. It does not infer a project from a name, launch an agent, synchronize project state, or manage the lifetime of tmux sessions. Use `workspace close --id ID` to inspect a target and add `--yes` when closure is intended; Alfred users can use `cs`. Closing windows does not manage tmux session lifetime.
+Agents decide whether a task deserves its own workspace and supply the name, directory, URLs, note, and optional existing tmux session. The CLI performs only the requested setup. It resolves terminal links by name as described above; it does not launch an agent, synchronize project state, or manage the lifetime of tmux sessions. Use `workspace close --id ID` to inspect a target and add `--yes` when closure is intended; Alfred users can use `cs`. Closing windows does not manage tmux session lifetime.

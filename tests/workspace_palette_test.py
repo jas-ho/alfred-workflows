@@ -194,7 +194,7 @@ def test_create_once_uses_parser_defaults_and_literal_name(monkeypatch, stay):
             "operation": "create",
             "name": "--stay",
             "stay": stay,
-            "directory": str(Path.home()),
+            "directory": None,
         }
     ]
 

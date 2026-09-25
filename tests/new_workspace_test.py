@@ -11,6 +11,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1] / "workflows/new-workspace"
+sys.path.insert(0, str(ROOT))
 
 
 def load(name, filename):
@@ -110,23 +111,32 @@ def test_alfred_preview_preserves_literal_name_and_stay_modifier(config, monkeyp
 
 def test_tmux_existing_session_attaches_without_creating_or_switching(monkeypatch):
     calls = []
-    monkeypatch.setattr(opener.shutil, "which", lambda _: "/opt/homebrew/bin/tmux")
+    monkeypatch.setattr(
+        opener.terminal, "tmux_binary", lambda: "/opt/homebrew/bin/tmux"
+    )
     monkeypatch.setattr(opener, "run", lambda argv: calls.append(argv) or "window-id")
     request = {"tmux_session": "running-agent", "directory": "/tmp", "id": "a" * 32}
     result = opener.open_app(request, {"opener": "ghostty"})
     assert result["tmux_session"] == "running-agent"
-    assert len(calls) == 1
-    assert calls[0][-1] == "/opt/homebrew/bin/tmux attach-session -t =running-agent"
-    assert "running-agent" not in calls[0][2]  # data is argv, not script source
+    assert len(calls) == 2
+    assert (
+        calls[-1][-1]
+        == "/usr/bin/env -u TMUX -u TMUX_TMPDIR /opt/homebrew/bin/tmux attach-session -t =running-agent"
+    )
+    assert "running-agent" not in calls[-1][2]  # data is argv, not script source
 
 
-def test_new_tmux_session_gets_directory_and_explicit_path(monkeypatch):
+def test_new_tmux_session_gets_directory_and_explicit_path(monkeypatch, tmp_path):
     calls = []
-    monkeypatch.setattr(opener.shutil, "which", lambda _: "/opt/homebrew/bin/tmux")
+    monkeypatch.setattr(
+        opener.terminal, "tmux_binary", lambda: "/opt/homebrew/bin/tmux"
+    )
     monkeypatch.setattr(opener, "run", lambda argv: calls.append(argv) or "window-id")
     monkeypatch.setenv("PATH", "/opt/homebrew/bin:/usr/bin")
+    directory = tmp_path / 'with "quotes"'
+    directory.mkdir()
     request = {
-        "directory": '/tmp/with "quotes"',
+        "directory": str(directory),
         "id": "b" * 32,
         "name": "Research Notes",
     }
@@ -140,7 +150,7 @@ def test_new_tmux_session_gets_directory_and_explicit_path(monkeypatch):
         "-c",
         request["directory"],
         "-e",
-        "PATH=/opt/homebrew/bin:/usr/bin",
+        "PATH=" + opener.terminal.environment()["PATH"],
     ]
     assert result["tmux_session"] == "ws-research-notes"
 
@@ -209,11 +219,11 @@ def test_readable_tmux_name_and_collision_suffix(monkeypatch, name, session):
             raise RuntimeError("duplicate session: " + argv[4])
         return "native-window"
 
-    monkeypatch.setattr(opener.shutil, "which", lambda _: "/tmux")
+    monkeypatch.setattr(opener.terminal, "tmux_binary", lambda: "/tmux")
     monkeypatch.setattr(opener, "run", run)
     result = opener.open_app({"directory": "/tmp", "name": name}, {"opener": "ghostty"})
     assert result["tmux_session"] == session + "-3"
-    assert len(calls) == 4
+    assert len(calls) == 5
     assert shlex.split(calls[-1][-1])[-1] == "=" + session + "-3"
 
 
@@ -224,7 +234,7 @@ def test_tmux_creation_errors_are_not_retried(monkeypatch):
         calls.append(argv)
         raise RuntimeError("permission denied")
 
-    monkeypatch.setattr(opener.shutil, "which", lambda _: "/tmux")
+    monkeypatch.setattr(opener.terminal, "tmux_binary", lambda: "/tmux")
     monkeypatch.setattr(opener, "run", run)
     with pytest.raises(RuntimeError, match="permission denied"):
         opener.open_app({"directory": "/tmp", "name": "Test"}, {"opener": "ghostty"})
@@ -233,11 +243,11 @@ def test_tmux_creation_errors_are_not_retried(monkeypatch):
 
 def test_ghostty_failure_preserves_created_tmux_identity(monkeypatch):
     def run(argv):
-        if "new-session" in argv:
+        if "new-session" in argv or "has-session" in argv:
             return ""
         raise RuntimeError("Automation permission denied")
 
-    monkeypatch.setattr(opener.shutil, "which", lambda _: "/tmux")
+    monkeypatch.setattr(opener.terminal, "tmux_binary", lambda: "/tmux")
     monkeypatch.setattr(opener, "run", run)
     with pytest.raises(opener.WindowOpenError) as caught:
         opener.open_app({"directory": "/tmp", "name": "Test"}, {"opener": "ghostty"})

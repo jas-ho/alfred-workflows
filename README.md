@@ -23,7 +23,7 @@ brew install jq cliclick fzf
 
 ### [Doorplate Spaces](dist/Doorplate%20Spaces.alfredworkflow)
 
-**Keywords:** `ws` (or `workspace`) opens the workspace palette: search desktops, then choose Switch, Rename or Close; New workspace offers creation with return/stay choices. Back rows preserve the root search. Fast paths remain `space` / `sp`, `space back`, `sn <name>`, `cs` and `ns`.
+**Keywords:** `ws` (or `workspace`) opens the workspace palette: search desktops, then choose Switch, Rename or Close; `ws <name>` also offers creation with return/stay choices below partial matches, hiding Create on an exact desktop-name match. New workspace always offers creation. Back rows preserve the root search. Fast paths remain `space` / `sp`, `space back`, `sn <name>`, `cs` and `ns`.
 
 Search results show desktop numbers and mark the current desktop. Renaming previews the target before Return and refuses to change a different desktop if you switched while Alfred was open. Fullscreen app Spaces are excluded. Names stay with their Space when reordered.
 
@@ -74,9 +74,9 @@ Requests a new window of the chosen app on the current Space, then focuses it on
 
 **Keywords:** `ns`, `newspace`
 
-`ns Research` creates a named desktop with fresh browser, blank Obsidian, and Ghostty windows in three columns, then returns to the original desktop. Command-Return stays in the new desktop with the terminal focused. The terminal uses a dedicated, readable tmux session name such as `ws-research`; no note is created automatically.
+`ns Research` creates a named desktop with fresh browser, blank Obsidian, and Ghostty windows in three columns, then returns to the original desktop. Command-Return stays in the new desktop with the terminal focused. The subtitle shows which tmux session or project folder the terminal will use; no note is created automatically.
 
-The same operation is available to agents as `workspace create "Research"`, with optional `--directory`, repeated `--url`, `--note`, `--tmux-session`, `--layout`, and `--stay`. The app list and layout are configurable; ordinary apps use their new-window menu, while small helpers supply tmux/URL/note behavior. Partial failures preserve completed work and produce explicit results. See [configuration, CLI, and setup](workflows/new-workspace/README.md).
+The same operation is available to agents as `workspace create "Research"`, with optional `--directory`, repeated `--url`, `--note`, `--tmux-session`, `--layout`, and `--stay`. Name-only creation links the terminal to an exact running tmux session or a folder in the configured ordered `project_roots`, otherwise creating a fresh session in home. Explicit directory/session flags override linking. The app list and layout are configurable; ordinary apps use their new-window menu, while small helpers supply tmux/URL/note behavior. Partial failures preserve completed work and produce explicit results. See [configuration, CLI, and setup](workflows/new-workspace/README.md).
 
 **Dependencies:** Hammerspoon workspace worker, Doorplate app, Python 3; default recipe also needs tmux, Ghostty, Edge, and Obsidian with CLI enabled.
 

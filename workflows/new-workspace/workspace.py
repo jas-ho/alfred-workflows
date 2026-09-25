@@ -14,17 +14,24 @@ import uuid
 from pathlib import Path
 from urllib.parse import urlparse
 
+import workspace_terminal as terminal
+
 ROOT = Path(__file__).resolve().parent
 STATE = Path.home() / ".local/state/workspace"
 CONFIG = Path.home() / ".config/workspace/default.json"
 OPENERS = {"generic", "ghostty", "chromium", "obsidian"}
 
 
-def recipe(path: Path | None = None) -> list[dict]:
+def recipe_data(path: Path | None = None) -> dict:
     source = path or (CONFIG if CONFIG.exists() else ROOT / "default.json")
     data = json.loads(source.read_text())
     if not isinstance(data, dict):
         raise TypeError("Recipe must be a JSON object")
+    return data
+
+
+def recipe(path: Path | None = None, *, data: dict | None = None) -> list[dict]:
+    data = recipe_data(path) if data is None else data
     apps = data.get("apps")
     if not isinstance(apps, list) or not 1 <= len(apps) <= 8:
         raise ValueError("Recipe must contain between 1 and 8 apps")
@@ -72,12 +79,9 @@ def recipe(path: Path | None = None) -> list[dict]:
 
 def create_request(args: argparse.Namespace) -> dict:
     name = workspace_name(args.name)
-    directory = Path(args.directory).expanduser().resolve()
-    if not directory.is_dir():
-        raise ValueError("Directory does not exist: " + str(directory))
-    apps = recipe(args.config)
-    source = args.config or (CONFIG if CONFIG.exists() else ROOT / "default.json")
-    layout = args.layout or json.loads(source.read_text()).get("layout", "none")
+    data = recipe_data(args.config)
+    apps = recipe(data=data)
+    layout = args.layout or data.get("layout", "none")
     if layout not in ("main-stack", "columns", "none"):
         raise ValueError("Layout must be main-stack, columns, or none")
     kinds = {a["opener"] for a in apps}
@@ -94,12 +98,18 @@ def create_request(args: argparse.Namespace) -> dict:
         raise ValueError("--url requires a chromium opener in the recipe")
     if args.note and "obsidian" not in kinds:
         raise ValueError("--note requires an obsidian opener in the recipe")
-    if args.tmux_session and (
-        "ghostty" not in kinds or not re.fullmatch(r"[\w-]+", args.tmux_session)
-    ):
-        raise ValueError(
-            "--tmux-session requires Ghostty and an exact session name (letters, digits, _ or -)"
-        )
+    if args.tmux_session is not None:
+        if "ghostty" not in kinds:
+            raise ValueError("--tmux-session requires Ghostty")
+        terminal.session_name(args.tmux_session)
+    linking = terminal.intent(session=args.tmux_session, directory=args.directory)
+    if "ghostty" in kinds and args.directory is None and args.tmux_session is None:
+        linking = terminal.resolve(name, data)
+        if linking["ambiguous"]:
+            print("Workspace: " + terminal.describe(linking), file=sys.stderr)
+    directory = Path(linking["directory"]).expanduser().resolve()
+    if not directory.is_dir():
+        raise ValueError("Directory does not exist: " + str(directory))
     if args.note and (Path(args.note).is_absolute() or ".." in Path(args.note).parts):
         raise ValueError("--note must be an existing vault-relative note path")
     return {
@@ -109,7 +119,8 @@ def create_request(args: argparse.Namespace) -> dict:
         "directory": str(directory),
         "urls": urls,
         "note": args.note,
-        "tmux_session": args.tmux_session,
+        "tmux_session": linking["tmux_session"],
+        "new_tmux_session": linking["new_tmux_session"],
         "stay": args.stay,
         "layout": layout,
         "notify": False,
@@ -196,11 +207,22 @@ def send(request: dict, timeout: float = 270) -> dict:
         }
 
 
+def creation_preview(name: str) -> tuple[list[dict], str]:
+    data = recipe_data()
+    apps = recipe(data=data)
+    description = ""
+    if name.strip():
+        name = workspace_name(name)
+        if any(a["opener"] == "ghostty" for a in apps):
+            description = terminal.describe(terminal.resolve(name, data))
+    return apps, description
+
+
 def filter_items(name: str) -> dict:
     name = name.strip()
     try:
-        apps = recipe()
-        summary = " · ".join(a["name"] for a in apps)
+        apps, description = creation_preview(name)
+        summary = " · ".join(filter(None, [description, *[a["name"] for a in apps]]))
         item = {
             "title": f"Create ‘{name}’" if name else "Name your new workspace",
             "subtitle": summary + " · Return here when ready · ⌘ Stay there",
@@ -214,7 +236,7 @@ def filter_items(name: str) -> dict:
             },
         }
         return {"items": [item]}
-    except (OSError, ValueError, TypeError, KeyError) as error:
+    except (OSError, ValueError, TypeError, KeyError, RuntimeError) as error:
         return {
             "items": [
                 {
@@ -340,13 +362,12 @@ def parser() -> argparse.ArgumentParser:
     create = command(
         "create",
         "Create a desktop with configured app windows",
-        "Create a fresh desktop and app windows, then return to the original desktop unless --stay. Manual desktop switching is respected. Partial work is kept; inspect result before retrying.",
+        "Create a fresh desktop and app windows. Terminal names link by exact case-insensitive match: existing tmux session, then configured project folders, otherwise a new unique home session. Return to the original desktop unless --stay. Manual desktop switching is respected. Partial work is kept; inspect result before retrying.",
     )
     create.add_argument("name")
     create.add_argument(
         "--directory",
-        default=str(Path.home()),
-        help="Terminal working directory (default: home)",
+        help="Explicit terminal directory; bypass name linking (use ~ for a fresh home session)",
     )
     create.add_argument(
         "--url", action="append", help="HTTP(S) URL; repeat for more tabs"
@@ -356,7 +377,7 @@ def parser() -> argparse.ArgumentParser:
     )
     create.add_argument(
         "--tmux-session",
-        help="Attach an existing session; default: new readable unique session",
+        help="Attach this exact existing session; bypass automatic name linking",
     )
     create.add_argument(
         "--config",
@@ -405,7 +426,10 @@ def operation_request(args: argparse.Namespace) -> dict:
     if args.command == "check":
         request.update(directory=str(Path.home()), urls=[])
         try:
-            request["apps"] = recipe()
+            data = recipe_data()
+            request["apps"] = recipe(data=data)
+            if any(a["opener"] == "ghostty" for a in request["apps"]):
+                terminal.project_roots(data)
         except (OSError, ValueError, TypeError, KeyError) as error:
             request["apps_error"] = str(error)
     return request

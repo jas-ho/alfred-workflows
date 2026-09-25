@@ -7,6 +7,7 @@ import json
 import os
 import subprocess
 import sys
+import unicodedata
 
 
 ERRORS = (
@@ -20,8 +21,16 @@ ERRORS = (
 )
 
 
+def name_key(name: str) -> str:
+    return unicodedata.normalize("NFC", name).strip().casefold()
+
+
+def exact_desktop(query: str, desktops: list[dict]) -> bool:
+    return any(name_key(query) == name_key(d["name"]) for d in desktops)
+
+
 def matches(query: str, text: str) -> bool:
-    return all(word in text.casefold() for word in query.casefold().split())
+    return all(word in name_key(text) for word in name_key(query).split())
 
 
 def variables(screen: str, selected: str = "", root_query: str = "") -> dict:
@@ -89,6 +98,33 @@ def back_row(root_query: str, selected: str = "", *, actions: bool = False) -> d
     )
 
 
+def create_rows(
+    query: str, apps: list[dict], description: str, error: str | None
+) -> list[dict]:
+    if error:
+        return [
+            row("create-unavailable", "Cannot create workspace", error, valid=False)
+        ]
+    name = query.strip()
+    summary = " · ".join(filter(None, [description, *[a["name"] for a in apps]]))
+    return [
+        operation_row(
+            "create-stay" if stay else "create-return",
+            title,
+            (f"‘{name}’ · " if name else "Type a workspace name · ") + summary,
+            "create",
+            name=name,
+            stay=stay,
+            valid=bool(name),
+            icon="create.png",
+        )
+        for stay, title in [
+            (False, "Create and return here"),
+            (True, "Create and stay there"),
+        ]
+    ]
+
+
 def render(
     screen: str,
     query: str,
@@ -98,6 +134,8 @@ def render(
     state: dict | None = None,
     apps: list[dict] | None = None,
     error: str | None = None,
+    create_error: str | None = None,
+    description: str = "",
 ) -> dict:
     """Render explicit screens from injected data, with no I/O or mutations."""
     if screen == "root":
@@ -169,6 +207,8 @@ def render(
         ]
         if not numeric:
             items.extend(item for aliases, item in choices if matches(query, aliases))
+        if query.strip() and not exact_desktop(query, desktops):
+            items.extend(create_rows(query, apps or [], description, create_error))
         if not items:
             items.append(
                 row(
@@ -248,24 +288,7 @@ def render(
                     back,
                 ]
     elif screen == "create":
-        name = query.strip()
-        summary = " · ".join(app["name"] for app in (apps or []))
-        for stay, title in [
-            (False, "Create and return here"),
-            (True, "Create and stay there"),
-        ]:
-            items.append(
-                operation_row(
-                    "create-stay" if stay else "create-return",
-                    title,
-                    (f"‘{name}’ · " if name else "Type a workspace name · ") + summary,
-                    "create",
-                    name=name,
-                    stay=stay,
-                    valid=bool(name),
-                    icon="create.png",
-                )
-            )
+        items.extend(create_rows(query, apps or [], description, create_error))
         items.append(back)
     elif screen == "help":
         guidance = [
@@ -279,7 +302,7 @@ def render(
             ),
             (
                 "Create defaults",
-                "Configured apps · home directory · new browser tab · blank notes · fresh tmux session",
+                "Configured apps · tmux links by name · new browser tab · blank notes",
             ),
             (
                 "Advanced creation",
@@ -314,6 +337,7 @@ def main(root: bool = False) -> None:
     selected = os.environ.get("ws_selected", "")
     root_query = os.environ.get("ws_root_query", "")
     state, apps, error = None, None, None
+    description, create_error = "", None
     try:
         import doorplate as dp
 
@@ -329,14 +353,35 @@ def main(root: bool = False) -> None:
                     )
                 )
             state = result["data"]
-        elif screen == "create":
-            apps = dp.workspace.recipe()
+        if screen == "create" or (
+            screen == "root"
+            and state is not None
+            and query.strip()
+            and not exact_desktop(query, state["desktops"])
+        ):
+            try:
+                preview = getattr(dp.workspace, "creation_preview", None)
+                if preview is None:
+                    raise RuntimeError(
+                        "Update New Workspace to enable workspace creation here"
+                    )
+                apps, description = preview(query)
+            except ERRORS as failure:
+                create_error = str(failure)
     except ERRORS as failure:
         error = f"{failure} · Check Workspace installation and run workspace check in Terminal"
     print(
         json.dumps(
             render(
-                screen, query, selected, root_query, state=state, apps=apps, error=error
+                screen,
+                query,
+                selected,
+                root_query,
+                state=state,
+                apps=apps,
+                error=error,
+                description=description,
+                create_error=create_error,
             ),
             ensure_ascii=False,
         )
