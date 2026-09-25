@@ -18,28 +18,32 @@
 ## Adding a New Workflow
 
 **GUI-first** (when designing UI in Alfred):
+
 1. Create workflow in Alfred Preferences (generates a new UUID dir)
 2. `mkdir workflows/<new-name>` and move contents from Alfred's UUID dir
 3. Extract substantial scripts to standalone files and wire them via `scriptfile`
 
 **Code-first** (when you already know the plist structure):
+
 1. `mkdir workflows/<new-name>` and create `info.plist` + scripts
    (use an existing workflow like `smart-date` as a reference for plist structure)
 2. Run `./build.sh` to create the `.alfredworkflow` zip
 3. `open "dist/<Name>.alfredworkflow"` to import into Alfred
 
 **Both paths then:**
-4. Set a stable `bundleid` in `info.plist` (convention: `com.jason.<name>`)
-5. Run `./dev-setup.sh` to symlink the workflow dir into Alfred
-6. Complete the checklist below
+
+1. Set a stable `bundleid` in `info.plist` (convention: `com.jason.<name>`)
+2. Run `./dev-setup.sh` to symlink the workflow dir into Alfred
+3. Complete the checklist below
 
 ## Completion Checklist
 
 After adding or modifying a workflow:
+
 - [ ] `uv run pytest` passes
 - [ ] `./build.sh` to update dist/ zips
 - [ ] README.md updated (add entry under `## Workflows` for new workflows)
-- [ ] `codex review --uncommitted` for a second opinion on non-trivial changes
+- [ ] Cross-model review via `codex-pair` for non-trivial changes (Codex author → Claude reviewer; Claude author → Codex reviewer). Record reviewer, scope, supplied context and verdict in the completion report; if the counterpart cannot start, this item stays open. See codex-pair’s README (sandbox startup failure).
 
 ## Modifying a Workflow
 
@@ -69,6 +73,7 @@ uv run pytest
 ```
 
 Conventions:
+
 - Add tests under `tests/*_test.py` so pytest discovers them.
 - Use `@pytest.mark.parametrize` for table-driven behavior checks.
 - Prefer extracting pure helper functions from workflow scripts when logic needs unit tests.
