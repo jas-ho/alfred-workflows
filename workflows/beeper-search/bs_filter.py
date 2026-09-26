@@ -17,7 +17,8 @@ def main():
     if not cli:
         return error("beeper-search not found", "Install it on your login shell's PATH or set BEEPER_SEARCH_BIN")
     try:
-        proc = subprocess.run([cli, "--alfred", query], capture_output=True, text=True, env=env(), timeout=10)
+        # "--" keeps a query like "--deep" from being parsed as an option
+        proc = subprocess.run([cli, "--alfred", "--", query], capture_output=True, text=True, env=env(), timeout=10)
     except (OSError, subprocess.TimeoutExpired) as e:
         return error("beeper-search failed", e.__class__.__name__)
     return proc.stdout if proc.returncode == 0 and proc.stdout.strip() else error(

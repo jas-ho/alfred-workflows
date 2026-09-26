@@ -22,7 +22,7 @@ def run(script, arg, cli, tmp_path):
 
 
 def test_filter_passes_cli_items_through(tmp_path):
-    cli = fake_cli(tmp_path, 'echo \'{"items": [{"title": "ok:\'"$2"\'"}]}\'\n')
+    cli = fake_cli(tmp_path, 'echo \'{"items": [{"title": "ok:\'"$3"\'"}]}\'\n')
     out = json.loads(run("bs_filter.py", "taufe emmi", cli, tmp_path).stdout)
     assert out["items"][0]["title"] == "ok:taufe emmi"
 
