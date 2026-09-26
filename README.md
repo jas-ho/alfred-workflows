@@ -17,6 +17,10 @@ brew install jq cliclick fzf
 
 ## Workflows
 
+### [Beeper Search](dist/Beeper%20Search.alfredworkflow)
+
+**Keywords:** `bs` (or `beeper`). Searches Beeper messages across all networks through `~/bin/beeper-search` (Beeper Desktop's local API): words match anywhere in a chat and in any order, including stems and compound words; one row per chat, ranked by how many words matched, then recency. Return opens the chat at that message in Beeper, Command+Return copies the message text, Option+Return opens its first link. With Beeper assigned to All Desktops (Dock > Options), the chat opens on the current Space; a Hammerspoon watcher hides Beeper again on Space switch. Requires Beeper Desktop with its API enabled and `~/bin/beeper-search`.
+
 ### [Restart App](dist/Restart%20App.alfredworkflow)
 
 **Keywords:** `ra` (also `rr`, `restart`, `relaunch`); add Space to enter the app list without normal Alfred results. Lists running apps with their own icons, multiword matching, compact names, and initials. Return requests a normal quit and reopens the app after it exits. Option+Return quits only; Command+Return hides an app; `rexclude` edits the hidden-app list. Save prompts and cancelled quits are not overridden. Matching uses app name; actions retain the selected path, process ID, and launch time. Finder, Alfred, and nested helper apps are excluded. macOS graphical login session required. [Details](workflows/restart-app/README.md).
