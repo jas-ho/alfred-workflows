@@ -8,7 +8,7 @@ import subprocess
 import sys
 from urllib.parse import urlsplit
 
-from bs_common import env, tool
+from bs_common import env, log_pick, tool
 
 
 def valid_url(url):
@@ -27,6 +27,14 @@ def main():
     except (IndexError, json.JSONDecodeError):
         return "Invalid selection"
     action = arg.get("action") if isinstance(arg, dict) else None
+    try:
+        return act(arg, action)
+    finally:
+        if action in ("open", "copy", "link"):
+            log_pick(arg)   # after the action, detached
+
+
+def act(arg, action):
     try:
         if action == "copy" and isinstance(arg.get("text"), str):
             done = subprocess.run(["pbcopy"], input=arg["text"], text=True, capture_output=True, timeout=5)
