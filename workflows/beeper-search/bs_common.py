@@ -31,19 +31,18 @@ def _resolve():
 
 def _cached():
     try:
-        path, shell_path = json.loads(CACHE.read_text())
-        if os.path.isfile(path) and os.access(path, os.X_OK) and time.time() - CACHE.stat().st_mtime < 86400:
-            return path, shell_path
-    except (OSError, ValueError, TypeError):
+        entry = json.loads(CACHE.read_text())
+        if (isinstance(entry, list) and len(entry) == 2 and all(isinstance(x, str) for x in entry)
+                and entry[0].startswith("/") and os.path.isfile(entry[0]) and os.access(entry[0], os.X_OK)
+                and time.time() - CACHE.stat().st_mtime < 86400):
+            return entry[0], entry[1]
+    except (OSError, ValueError):
         pass
-    return None, None
+    return None, None   # missing, stale or malformed: resolve again
 
 
 def tool():
     """Path of the beeper-search CLI (BEEPER_SEARCH_BIN overrides), cached for a day."""
-    override = os.environ.get("BEEPER_SEARCH_BIN")
-    if override:
-        return override
     path, shell_path = _cached()
     if not path:
         path, shell_path = _resolve()
@@ -56,8 +55,8 @@ def tool():
             except OSError:
                 pass
     if shell_path:
-        os.environ["BS_LOGIN_PATH"] = shell_path
-    return path
+        os.environ["BS_LOGIN_PATH"] = shell_path   # dependencies (uv, beeper) come from the login PATH
+    return os.environ.get("BEEPER_SEARCH_BIN") or path
 
 
 def env():

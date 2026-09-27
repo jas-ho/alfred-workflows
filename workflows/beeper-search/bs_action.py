@@ -12,9 +12,13 @@ from bs_common import env, tool
 
 
 def valid_url(url):
-    parts = urlsplit(url) if isinstance(url, str) else None
-    return bool(parts and parts.scheme in ("http", "https") and parts.hostname
-                and not any(ord(c) <= 0x20 or ord(c) == 0x7f for c in url))
+    if not isinstance(url, str) or any(ord(c) <= 0x20 or ord(c) == 0x7f for c in url):
+        return False
+    try:
+        parts = urlsplit(url)
+        return parts.scheme in ("http", "https") and bool(parts.hostname)
+    except ValueError:  # e.g. "https://[broken"
+        return False
 
 
 def main():

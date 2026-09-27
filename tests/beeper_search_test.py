@@ -6,6 +6,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 WF = Path(__file__).parent.parent / "workflows" / "beeper-search"
 
 
@@ -44,3 +46,18 @@ def test_action_refuses_non_http_link(tmp_path):
     cli = fake_cli(tmp_path, "exit 0\n")
     res = run("bs_action.py", json.dumps({"action": "link", "url": "file:///etc/passwd"}), cli, tmp_path)
     assert "Refused" in res.stdout
+
+
+@pytest.mark.parametrize("url", ["https://[broken", "file:///etc/passwd", "https://ok.example/a b", ""])
+def test_action_rejects_malformed_links(tmp_path, url):
+    cli = fake_cli(tmp_path, "exit 0\n")
+    res = run("bs_action.py", json.dumps({"action": "link", "url": url}), cli, tmp_path)
+    assert "Refused" in res.stdout and res.returncode == 0
+
+
+def test_malformed_cache_is_a_miss(tmp_path):
+    (tmp_path / "bin-path").write_text(json.dumps(["relative/path", 5]))
+    sys.path.insert(0, str(WF))
+    import bs_common
+    bs_common.CACHE = tmp_path / "bin-path"
+    assert bs_common._cached() == (None, None)
