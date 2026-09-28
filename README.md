@@ -15,6 +15,20 @@ Install dependencies for workflows that need them:
 brew install jq cliclick fzf
 ```
 
+### Helpers outside Alfred
+
+Most workflows are self-contained. These need something installed outside the `.alfredworkflow` file:
+
+| Workflow | Needs | Where it comes from |
+| --- | --- | --- |
+| Beeper Search | `beeper-search` CLI on the login PATH (or `BEEPER_SEARCH_BIN`) | Not in this repo: a separate script over Beeper Desktop's local API |
+| Doorplate Spaces (`cs` close) | Hammerspoon backend `~/bin/hammerspoon/space-close.lua` | Not in this repo: lives in my separate `~/bin` repo |
+| New Workspace | `workspace` CLI at `~/.local/bin/workspace` plus the Hammerspoon worker | In this repo (`workflows/new-workspace/`), linked by hand; see its README |
+| Multi Paste | `~/bin/multiclip.py`, `~/bin/multiclip-wrapper.sh` | In this repo; copy or link with `./dev-setup.sh` |
+| Multi Send | `~/bin/multisend.py` | In this repo; copy or link with `./dev-setup.sh` |
+
+Workflows marked "not in this repo" are published for reference; they will not work without the missing helper.
+
 ## Workflows
 
 ### [Beeper Search](dist/Beeper%20Search.alfredworkflow)
@@ -83,8 +97,6 @@ Requests a new window of the chosen app on the current Space, then focuses it on
 The same operation is available to agents as `workspace create "Research"`, with optional `--directory`, repeated `--url`, `--note`, `--tmux-session`, `--layout`, and `--stay`. Name-only creation links the terminal to an exact running tmux session or a folder under the configured ordered `project_roots`, searching up to each root’s depth limit. New folder-based sessions omit a leading date prefix; unmatched names create a fresh session in home. Explicit directory/session flags override linking. The app list and layout are configurable; ordinary apps use their new-window menu, while small helpers supply tmux/URL/note behavior. Partial failures preserve completed work and produce explicit results. See [configuration, CLI, and setup](workflows/new-workspace/README.md).
 
 **Dependencies:** Hammerspoon workspace worker, Doorplate app, Python 3; default recipe also needs tmux, Ghostty, Edge, and Obsidian with CLI enabled.
-
-**Retired:** the previous `pj`/pjws workflow is disabled and [archived in place](workflows/pjws/ARCHIVED.md). It is no longer built. Its old project data and tmux sessions are retained.
 
 ---
 
@@ -270,3 +282,7 @@ Test conventions:
 - Keep workflow logic in small pure helpers where possible to make testing easy.
 
 See [CLAUDE.md](CLAUDE.md) for detailed development docs.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
