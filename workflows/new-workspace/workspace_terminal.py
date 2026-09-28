@@ -9,6 +9,7 @@ import shutil
 import stat
 import subprocess
 import unicodedata
+from collections.abc import Iterable
 from pathlib import Path
 
 
@@ -185,14 +186,19 @@ def session_match(name: str, names: list[str]) -> list[str]:
 
 def resolve(name: str, data: dict) -> dict:
     roots = project_roots(data)
-    names = sessions()
+    # Lazy tiers: a unique session match needs no folder traversal.
+    return resolve_in(name, sessions(), (folders(r, d) for r, d in roots))
+
+
+def resolve_in(name: str, names: list[str], tiers: Iterable[list[Path]]) -> dict:
+    """Resolve against an inventory of session names and per-tier folder lists."""
     matches = session_match(name, names)
     if matches:
         return (
             intent(session=matches[0]) if len(matches) == 1 else intent(ambiguous=True)
         )
-    for root, depth in roots:
-        folder_hits = folder_matches(name, folders(root, depth))
+    for tier in tiers:
+        folder_hits = folder_matches(name, tier)
         if len(folder_hits) > 1:
             return intent(ambiguous=True)
         if folder_hits:
@@ -213,6 +219,57 @@ def resolve(name: str, data: dict) -> dict:
                 new_name=None if existing else derived,
             )
     return intent()
+
+
+def suggestions(
+    prefix: str, data: dict, limit: int = 5, exclude: Iterable[str] = ()
+) -> list[tuple[str, dict]]:
+    """Linkable names starting with prefix: tmux sessions first, then folders.
+
+    Only names that resolve to a link are offered; ambiguous ones (generic
+    subfolder names such as docs or notes), the exact typed name and names in
+    exclude (e.g. existing desktops) are skipped. Folders with a README.md
+    (project convention) and shallower folders rank first across roots; root
+    order still decides which folder a chosen name links to. Folders are only
+    walked when sessions don't fill the limit.
+    """
+    wanted = key(prefix)
+    if not wanted:
+        return []
+    names = sessions()
+    result, seen = [], {wanted, *(key(x) for x in exclude)}
+
+    def offer(candidates: list[str], tiers: list[list[Path]]) -> bool:
+        for candidate in candidates:
+            k = key(candidate)
+            if k in seen or not k.startswith(wanted):
+                continue
+            seen.add(k)
+            value = resolve_in(candidate, names, tiers)
+            if not value["ambiguous"]:
+                result.append((candidate, value))
+                if len(result) == limit:
+                    return True
+        return False
+
+    # A session match resolves before any folder tier is consulted.
+    if offer(sorted(names, key=key), []):
+        return result
+    roots = project_roots(data)
+    tiers = [folders(r, d) for r, d in roots]
+    ranked = sorted(
+        (
+            not (path / "README.md").is_file(),
+            len(path.relative_to(root).parts),
+            key(undated(path.name)),
+            undated(path.name),
+        )
+        for (root, _), tier in zip(roots, tiers)
+        for path in tier
+        if key(undated(path.name)).startswith(wanted)
+    )
+    offer([entry[-1] for entry in ranked], tiers)
+    return result
 
 
 def describe(value: dict) -> str:

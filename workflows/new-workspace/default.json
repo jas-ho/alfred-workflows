@@ -5,8 +5,8 @@
     {"path": "~/Code", "depth": 1}
   ],
   "apps": [
-    {"app": "/Applications/Microsoft Edge.app", "opener": "chromium"},
-    {"app": "/Applications/Obsidian.app", "opener": "obsidian", "vault": "Projects"},
+    {"app": "/Applications/Microsoft Edge.app", "opener": "chromium", "extra": true},
+    {"app": "/Applications/Obsidian.app", "opener": "obsidian", "vault": "Projects", "extra": true},
     {"app": "/Applications/Ghostty.app", "opener": "ghostty"}
   ]
 }

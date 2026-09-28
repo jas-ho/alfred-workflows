@@ -67,6 +67,8 @@ def recipe(path: Path | None = None, *, data: dict | None = None) -> list[dict]:
             or not spec["vault"]
         ):
             raise ValueError("The obsidian opener requires Obsidian and a vault name")
+        if not isinstance(spec.get("extra", False), bool):
+            raise ValueError("extra must be true or false")
         if "menu" in spec and (
             not isinstance(spec["menu"], list)
             or not spec["menu"]
@@ -74,13 +76,27 @@ def recipe(path: Path | None = None, *, data: dict | None = None) -> list[dict]:
         ):
             raise ValueError('menu must be a list such as ["File", "New Window"]')
         result.append(spec)
+    if all(spec.get("extra") for spec in result):
+        raise ValueError("Recipe needs at least one app without extra: true")
     return result
+
+
+def selected_apps(
+    apps: list[dict], *, full: bool, url: bool = False, note: bool = False
+) -> list[dict]:
+    """Plain creation skips extra apps; --full, or a --url/--note needing one, adds it."""
+    needed = {"chromium"} if url else set()
+    needed |= {"obsidian"} if note else set()
+    return [a for a in apps if full or not a.get("extra") or a["opener"] in needed]
 
 
 def create_request(args: argparse.Namespace) -> dict:
     name = workspace_name(args.name)
     data = recipe_data(args.config)
-    apps = recipe(data=data)
+    urls = args.url or []
+    apps = selected_apps(
+        recipe(data=data), full=args.full, url=bool(urls), note=bool(args.note)
+    )
     layout = args.layout or data.get("layout", "none")
     if layout not in ("main-stack", "columns", "none"):
         raise ValueError("Layout must be main-stack, columns, or none")
@@ -88,7 +104,6 @@ def create_request(args: argparse.Namespace) -> dict:
     for kind in ("ghostty", "chromium", "obsidian"):
         if sum(a["opener"] == kind for a in apps) > 1:
             raise ValueError("Use at most one " + kind + " opener per recipe")
-    urls = args.url or []
     if any(
         urlparse(u).scheme not in ("https", "http") or not urlparse(u).netloc
         for u in urls
@@ -218,22 +233,59 @@ def creation_preview(name: str) -> tuple[list[dict], str]:
     return apps, description
 
 
+def creation_suggestions(
+    prefix: str, exclude: list[str] | tuple[str, ...] = ()
+) -> list[tuple[str, str]]:
+    """(name, terminal description) for linkable names starting with prefix."""
+    data = recipe_data()
+    if not any(
+        a["opener"] == "ghostty" for a in selected_apps(recipe(data=data), full=False)
+    ):
+        return []
+    return [
+        (name, terminal.describe(value))
+        for name, value in terminal.suggestions(prefix, data, exclude=exclude)
+    ]
+
+
+def app_summaries(apps: list[dict], description: str) -> tuple[str, str | None]:
+    """Subtitles for plain and --full creation; None when the recipe has no extras."""
+
+    def join(selected: list[dict]) -> str:
+        return " · ".join(filter(None, [description, *[a["name"] for a in selected]]))
+
+    plain = selected_apps(apps, full=False)
+    return join(plain), (join(apps) if len(plain) < len(apps) else None)
+
+
 def filter_items(name: str) -> dict:
     name = name.strip()
     try:
         apps, description = creation_preview(name)
-        summary = " · ".join(filter(None, [description, *[a["name"] for a in apps]]))
+        summary, full = app_summaries(apps, description)
+        mods = {
+            "cmd": {
+                "subtitle": summary + " · Stay in the new workspace",
+                "variables": {"workspace_stay": "1"},
+            }
+        }
+        if full:
+            mods["alt"] = {
+                "subtitle": full + " · Return here when ready",
+                "variables": {"workspace_full": "1"},
+            }
+            mods["cmd+alt"] = {
+                "subtitle": full + " · Stay in the new workspace",
+                "variables": {"workspace_stay": "1", "workspace_full": "1"},
+            }
         item = {
             "title": f"Create ‘{name}’" if name else "Name your new workspace",
-            "subtitle": summary + " · Return here when ready · ⌘ Stay there",
+            "subtitle": summary
+            + " · Return here when ready · ⌘ Stay there"
+            + (" · ⌥ all apps" if full else ""),
             "valid": bool(name),
             "arg": name,
-            "mods": {
-                "cmd": {
-                    "subtitle": summary + " · Stay in the new workspace",
-                    "variables": {"workspace_stay": "1"},
-                }
-            },
+            "mods": mods,
         }
         return {"items": [item]}
     except (OSError, ValueError, TypeError, KeyError, RuntimeError) as error:
@@ -362,7 +414,7 @@ def parser() -> argparse.ArgumentParser:
     create = command(
         "create",
         "Create a desktop with configured app windows",
-        "Create a fresh desktop and app windows. Terminal names link by exact case-insensitive match: existing tmux session, then configured project folders, otherwise a new unique home session. Return to the original desktop unless --stay. Manual desktop switching is respected. Partial work is kept; inspect result before retrying.",
+        "Create a fresh desktop and app windows: the recipe's core apps (default: the terminal), plus its extra apps with --full. Terminal names link by exact case-insensitive match: existing tmux session, then configured project folders, otherwise a new unique home session. Return to the original desktop unless --stay. Manual desktop switching is respected. Partial work is kept; inspect result before retrying.",
     )
     create.add_argument("name")
     create.add_argument(
@@ -386,6 +438,11 @@ def parser() -> argparse.ArgumentParser:
     )
     create.add_argument(
         "--stay", action="store_true", help="Stay on the new desktop when ready"
+    )
+    create.add_argument(
+        "--full",
+        action="store_true",
+        help="Also open the recipe's extra apps (default recipe: browser and notes); --url/--note add the app they need",
     )
     create.add_argument(
         "--layout",

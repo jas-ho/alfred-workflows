@@ -106,22 +106,79 @@ def create_rows(
             row("create-unavailable", "Cannot create workspace", error, valid=False)
         ]
     name = query.strip()
-    summary = " · ".join(filter(None, [description, *[a["name"] for a in apps]]))
-    return [
-        operation_row(
+    lead = f"‘{name}’ · " if name else "Type a workspace name · "
+
+    def summary(selected: list[dict]) -> str:
+        return " · ".join(filter(None, [description, *[a["name"] for a in selected]]))
+
+    plain = [a for a in apps if not a.get("extra")]
+    has_extra = len(plain) < len(apps)
+    rows = []
+    for stay, title in [
+        (False, "Create and return here"),
+        (True, "Create and stay there"),
+    ]:
+        item = operation_row(
             "create-stay" if stay else "create-return",
             title,
-            (f"‘{name}’ · " if name else "Type a workspace name · ") + summary,
+            lead + summary(plain) + (" · ⌥ all apps" if has_extra else ""),
             "create",
             name=name,
             stay=stay,
             valid=bool(name),
             icon="create.png",
         )
-        for stay, title in [
-            (False, "Create and return here"),
-            (True, "Create and stay there"),
-        ]
+        if has_extra:
+            # Modifier connections fall back to the plain route, so the ⌥
+            # variant only swaps the payload and keeps the execute variables.
+            item["mods"] = {
+                "alt": {
+                    "subtitle": lead + summary(apps),
+                    "arg": json.dumps(
+                        {"action": "create", "name": name, "stay": stay, "full": True},
+                        ensure_ascii=False,
+                    ),
+                    "valid": bool(name),
+                    "variables": item["variables"],
+                }
+            }
+        rows.append(item)
+    return rows
+
+
+def suggestion_rows(suggestions: list[tuple[str, str]]) -> list[dict]:
+    """Complete the query to a linkable project name; Return never creates here."""
+    return [
+        {
+            **row(
+                "suggest-" + name,
+                name,
+                "Complete to this project · " + description,
+                valid=False,
+                icon="create.png",
+            ),
+            "autocomplete": name,
+        }
+        for name, description in suggestions
+    ]
+
+
+def rename_current_row(query: str, state: dict) -> list[dict]:
+    current = next((d for d in state["desktops"] if d["id"] == state["active"]), None)
+    if current is None:  # fullscreen app Spaces cannot be named
+        return []
+    name = query.strip()
+    label = current["name"] or f"Desktop {current['number']}"
+    return [
+        operation_row(
+            "root-rename-current",
+            f"Rename current to ‘{name}’",
+            f"{current['number']} · {label} → ‘{name}’ · name only; apps and tmux unchanged",
+            "rename",
+            id=current["id"],
+            name=name,
+            icon="DP-RENAME.png",
+        )
     ]
 
 
@@ -136,6 +193,7 @@ def render(
     error: str | None = None,
     create_error: str | None = None,
     description: str = "",
+    suggestions: list[tuple[str, str]] | None = None,
 ) -> dict:
     """Render explicit screens from injected data, with no I/O or mutations."""
     if screen == "root":
@@ -163,16 +221,25 @@ def render(
                 current = (
                     "Current desktop · " if desktop["id"] == state["active"] else ""
                 )
-                items.append(
-                    row(
-                        "root-" + desktop["id"],
-                        f"{desktop['number']} · {label}",
-                        current + "Enter for actions",
-                        target="actions",
-                        selected=desktop["id"],
-                        root_query=query,
-                    )
+                item = row(
+                    "root-" + desktop["id"],
+                    f"{desktop['number']} · {label}",
+                    current + "Enter for actions · ⌘ switch",
+                    target="actions",
+                    selected=desktop["id"],
+                    root_query=query,
                 )
+                item["mods"] = {
+                    "cmd": {
+                        "subtitle": "Switch to this desktop",
+                        "arg": json.dumps(
+                            {"action": "switch", "id": desktop["id"]},
+                            ensure_ascii=False,
+                        ),
+                        "variables": variables("execute"),
+                    }
+                }
+                items.append(item)
         choices = [
             (
                 "new create workspace",
@@ -208,7 +275,14 @@ def render(
         if not numeric:
             items.extend(item for aliases, item in choices if matches(query, aliases))
         if query.strip() and not exact_desktop(query, desktops):
+            taken = {name_key(d["name"]) for d in desktops}
+            items.extend(
+                suggestion_rows(
+                    [s for s in suggestions or [] if name_key(s[0]) not in taken]
+                )
+            )
             items.extend(create_rows(query, apps or [], description, create_error))
+            items.extend(rename_current_row(query, state))
         if not items:
             items.append(
                 row(
@@ -294,7 +368,7 @@ def render(
         guidance = [
             (
                 "Browse workspaces",
-                "Search names or exact desktop numbers; Return opens actions",
+                "Search names or exact desktop numbers; Return opens actions, ⌘Return switches",
             ),
             (
                 "Fast keywords",
@@ -302,7 +376,11 @@ def render(
             ),
             (
                 "Create defaults",
-                "Configured apps · tmux links by name · new browser tab · blank notes",
+                "Terminal linked by name (tmux session or project folder) · ⌥ adds browser and notes",
+            ),
+            (
+                "Unmatched names",
+                "Project suggestions complete the name · Create rows · Rename current",
             ),
             (
                 "Advanced creation",
@@ -338,6 +416,7 @@ def main(root: bool = False) -> None:
     root_query = os.environ.get("ws_root_query", "")
     state, apps, error = None, None, None
     description, create_error = "", None
+    suggestions: list[tuple[str, str]] = []
     try:
         import doorplate as dp
 
@@ -368,6 +447,16 @@ def main(root: bool = False) -> None:
                 apps, description = preview(query)
             except ERRORS as failure:
                 create_error = str(failure)
+            suggest = getattr(dp.workspace, "creation_suggestions", None)
+            if screen == "root" and suggest and state is not None:
+                # Suggestions are optional: their wider folder walk must not
+                # disable Create rows that resolved fine.
+                try:
+                    suggestions = suggest(
+                        query, exclude=[d["name"] for d in state["desktops"]]
+                    )
+                except ERRORS:
+                    suggestions = []
     except ERRORS as failure:
         error = f"{failure} · Check Workspace installation and run workspace check in Terminal"
     print(
@@ -382,6 +471,7 @@ def main(root: bool = False) -> None:
                 error=error,
                 description=description,
                 create_error=create_error,
+                suggestions=suggestions,
             ),
             ensure_ascii=False,
         )

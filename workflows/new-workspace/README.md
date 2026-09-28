@@ -1,6 +1,6 @@
 # Workspace
 
-`ns <name>` or `newspace <name>` creates a named Mission Control desktop, opens fresh windows, and returns to the original desktop. Command-Return stays in the new desktop. The default is browser, notes, terminal in three columns, with the terminal focused last. App minimum sizes can constrain the requested layout.
+`ns <name>` or `newspace <name>` creates a named Mission Control desktop, opens fresh windows, and returns to the original desktop. Command-Return stays in the new desktop; Option-Return also opens the recipe's extra apps (Option-Command-Return does both). The default opens only the terminal; browser and notes are marked `extra` and open with Option, `--full`, or when `--url`/`--note` needs them. With all three they sit in columns, terminal focused last. App minimum sizes can constrain the requested layout.
 
 ## CLI
 
@@ -59,7 +59,7 @@ Every `create` means a fresh desktop, even with the same name. Terminal linking 
 
 ## Configuration
 
-Copy `default.json` to `~/.config/workspace/default.json` and edit it, or use `--config path.json`. The app list controls both opening order and layout order; the last window receives focus. Layouts: `columns`, `main-stack` (first window left, remaining windows stacked right), or `none`. Override for one invocation with `--layout`.
+Copy `default.json` to `~/.config/workspace/default.json` and edit it, or use `--config path.json`. The app list controls both opening order and layout order; the last window receives focus. Mark an app `"extra": true` to open it only with `--full` (⌥ in Alfred) or when `--url`/`--note` requires it; at least one app must not be extra. Layouts: `columns`, `main-stack` (first window left, remaining windows stacked right), or `none`. Override for one invocation with `--layout`.
 
 `project_roots` is an ordered list of folder search tiers. The bundled personal recipe uses:
 

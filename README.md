@@ -27,7 +27,7 @@ brew install jq cliclick fzf
 
 ### [Doorplate Spaces](dist/Doorplate%20Spaces.alfredworkflow)
 
-**Keywords:** `ws` (or `workspace`) opens the workspace palette: search desktops, then choose Switch, Rename or Close; `ws <name>` also offers creation with return/stay choices below partial matches, hiding Create on an exact desktop-name match. New workspace always offers creation. Back rows preserve the root search. Fast paths remain `space` / `sp`, `space back`, `sn <name>`, `cs` and `ns`.
+**Keywords:** `ws` (or `workspace`) opens the workspace palette: search desktops, then choose Switch, Rename or Close (⌘Return switches directly); `ws <name>` also offers creation with return/stay choices below partial matches (⌥ adds browser and notes), then Rename current to that name, hiding both on an exact desktop-name match. Linkable project names and tmux sessions starting with the query appear as suggestions; Return completes the name. New workspace always offers creation. Back rows preserve the root search. Fast paths remain `space` / `sp`, `space back`, `sn <name>`, `cs` and `ns`.
 
 Search results show desktop numbers and mark the current desktop. Renaming previews the target before Return and refuses to change a different desktop if you switched while Alfred was open. Fullscreen app Spaces are excluded. Names stay with their Space when reordered.
 

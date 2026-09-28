@@ -263,7 +263,9 @@ def test_palette_create_visibility_and_order(query, expected):
     creates = [r for r in rows if r["uid"].startswith("ws-create-")]
     assert [json.loads(r["arg"])["stay"] for r in creates] == expected
     if creates:
-        assert rows[-2:] == creates
+        # Create rows sit just above the trailing Rename-current row.
+        assert rows[-3:-1] == creates
+        assert rows[-1]["uid"] == "ws-root-rename-current"
         assert json.loads(creates[0]["arg"])["name"] == query.strip()
         assert "attaches tmux immo" in creates[0]["subtitle"]
         explicit = palette.render("create", query, description="attaches tmux immo")[
@@ -278,7 +280,8 @@ def test_create_errors_leave_navigation_and_hide_on_exact_match():
         "items"
     ]
     assert rows[0]["variables"]["ws_screen"] == "actions"
-    assert rows[-1]["subtitle"] == "tmux unavailable"
+    assert rows[-2]["subtitle"] == "tmux unavailable"
+    assert rows[-1]["uid"] == "ws-root-rename-current"  # independent of create
     rows = palette.render("root", "IMMO", state=state, create_error="tmux unavailable")[
         "items"
     ]

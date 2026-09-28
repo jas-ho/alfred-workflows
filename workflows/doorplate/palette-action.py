@@ -17,7 +17,10 @@ def perform(payload: dict) -> str:
         return dp.perform_action(payload)
     # Parse explicit argv, with -- protecting names that resemble CLI options.
     argv = (
-        ["create"] + (["--stay"] if payload["stay"] else []) + ["--", payload["name"]]
+        ["create"]
+        + (["--stay"] if payload["stay"] else [])
+        + (["--full"] if payload.get("full") else [])
+        + ["--", payload["name"]]
     )
     request = dp.workspace.operation_request(dp.workspace.parser().parse_args(argv))
     result = dp.workspace.send(request)
