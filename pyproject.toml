@@ -2,12 +2,12 @@
 name = "alfred-workflows"
 version = "0.1.0"
 description = "Development and test harness for Alfred workflows."
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [dependency-groups]
 dev = [
     "lupa>=2.6,<3",
-    "pytest>=8.4,<9",
+    "pytest>=9.0.3,<10",
 ]
 
 [tool.pytest.ini_options]
