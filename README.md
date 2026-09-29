@@ -2,6 +2,8 @@
 
 Custom Alfred workflows for macOS productivity automation.
 
+![Smart Date: natural-language dates in five formats](docs/img/smart-date.gif)
+
 Note: [LLMs are great at one-shotting these](https://x.com/JasonObermaier/status/2017881958726975934). You should try it!
 
 ## Requirements
@@ -36,6 +38,8 @@ Workflows marked "not in this repo" are published for reference; they will not w
 **Keywords:** `bs` (or `beeper`). Searches Beeper messages across all networks through `~/bin/beeper-search` (Beeper Desktop's local API): words match anywhere in a chat and in any order, including stems and compound words; one row per chat, ranked by how many words matched, then recency. Return opens the chat at that message in Beeper, Command+Return copies the message text, Option+Return opens its first link. With Beeper assigned to All Desktops (Dock > Options), the chat opens on the current Space; a Hammerspoon watcher hides Beeper again on Space switch. Requires Beeper Desktop with its API enabled and `~/bin/beeper-search`.
 
 ### [Restart App](dist/Restart%20App.alfredworkflow)
+
+![Restart App: type ra to list running apps, filter, Return restarts](docs/img/restart-app.gif)
 
 **Keywords:** `ra` (also `rr`, `restart`, `relaunch`); add Space to enter the app list without normal Alfred results. Lists running apps with their own icons, multiword matching, compact names, and initials. Return requests a normal quit and reopens the app after it exits. Option+Return quits only; Command+Return hides an app; `rexclude` edits the hidden-app list. Save prompts and cancelled quits are not overridden. Matching uses app name; actions retain the selected path, process ID, and launch time. Finder, Alfred, and nested helper apps are excluded. macOS graphical login session required. [Details](workflows/restart-app/README.md).
 
@@ -115,6 +119,8 @@ Track status in [Issue #4](https://github.com/jas-ho/alfred-workflows/issues/4).
 
 ### [Discord Timestamps](dist/Discord%20Timestamps.alfredworkflow)
 
+![Discord Timestamps: dt friday 4pm lists every Discord timestamp format](docs/img/discord-timestamps.gif)
+
 **Keyword:** `dt`
 
 Convert natural language dates/times to Discord timestamp formats. Type something like "tomorrow 4pm" or "next Friday" and get all Discord timestamp variants.
@@ -131,6 +137,8 @@ Convert natural language dates/times to Discord timestamp formats. Type somethin
 ---
 
 ### [Clean Paste](dist/Clean%20Paste.alfredworkflow)
+
+![Clean Paste: wrapped, quote-barred terminal text pasted as one clean paragraph](docs/img/clean-paste.gif)
 
 **Keyword:** `clean paste` or `cp`
 
@@ -165,6 +173,8 @@ Position previews show halves, thirds, two-thirds, quarters, saved layouts, maxi
 ---
 
 ### [Smart Date](dist/Smart%20Date.alfredworkflow)
+
+![Smart Date: sd next tuesday and sd tomorrow 3pm in ISO, European, English, German and Unix formats](docs/img/smart-date.gif)
 
 **Keyword:** `sd` or `smartdate`
 
