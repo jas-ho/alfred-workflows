@@ -102,7 +102,7 @@
 			</dict>
 			<dict>
 				<key>destinationuid</key>
-				<string>WS-ACTION</string>
+				<string>WS-HIDE</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -128,6 +128,19 @@
 			<dict>
 				<key>destinationuid</key>
 				<string>DP-NOTIFY</string>
+				<key>modifiers</key>
+				<integer>0</integer>
+				<key>modifiersubtext</key>
+				<string></string>
+				<key>vitoclose</key>
+				<false/>
+			</dict>
+		</array>
+		<key>WS-HIDE</key>
+		<array>
+			<dict>
+				<key>destinationuid</key>
+				<string>WS-ACTION</string>
 				<key>modifiers</key>
 				<integer>0</integer>
 				<key>modifiersubtext</key>
@@ -505,6 +518,19 @@
 			<key>version</key>
 			<integer>2</integer>
 		</dict>
+		<dict>
+			<key>config</key>
+			<dict>
+				<key>unstackview</key>
+				<false/>
+			</dict>
+			<key>type</key>
+			<string>alfred.workflow.utility.hidealfred</string>
+			<key>uid</key>
+			<string>WS-HIDE</string>
+			<key>version</key>
+			<integer>1</integer>
+		</dict>
 	</array>
 	<key>readme</key>
 	<string>ws / workspace: browse desktops, actions, creation and help
@@ -576,7 +602,14 @@ Naming also changes Automatic color to Transparent; explicit colors are preserve
 		<key>WS-ACTION</key>
 		<dict>
 			<key>xpos</key>
-			<integer>640</integer>
+			<integer>740</integer>
+			<key>ypos</key>
+			<integer>650</integer>
+		</dict>
+		<key>WS-HIDE</key>
+		<dict>
+			<key>xpos</key>
+			<integer>540</integer>
 			<key>ypos</key>
 			<integer>650</integer>
 		</dict>

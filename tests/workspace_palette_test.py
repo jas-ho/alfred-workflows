@@ -272,8 +272,15 @@ def test_native_graph_routes_navigation_and_mutation_separately():
     for screen in ("actions", "rename", "create", "help"):
         assert route(screen)["destinationuid"] == "WS-MENU"
         assert route(screen)["vitoclose"] is True
-    assert route("execute")["destinationuid"] == "WS-ACTION"
+    # The input connection's Don't Close setting persists through routing.
+    # An explicit Hide Alfred node is needed even if the action edge is false.
+    assert route("execute")["destinationuid"] == "WS-HIDE"
     assert route("execute")["vitoclose"] is False
+    assert objects["WS-HIDE"]["type"] == "alfred.workflow.utility.hidealfred"
+    assert objects["WS-HIDE"]["config"]["unstackview"] is False
+    assert [e["destinationuid"] for e in data["connections"]["WS-HIDE"]] == [
+        "WS-ACTION"
+    ]
     assert objects["WS-ACTION"]["config"]["concurrently"] is False
     for uid in ("DP-SEARCH", "DP-RENAME", "DP-CLOSE"):
         assert data["connections"][uid][0]["destinationuid"] == "DP-ACTION"
